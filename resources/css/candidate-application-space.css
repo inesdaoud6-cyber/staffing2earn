@@ -1,0 +1,247 @@
+.as-header {
+    background: linear-gradient(135deg, #1a1a8c 0%, #3730a3 50%, #c026d3 100%);
+    border-radius: 16px;
+    padding: 1.75rem 2rem;
+    color: white;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.as-header h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin: 0 0 0.2rem 0;
+}
+
+.as-header p {
+    margin: 0;
+    opacity: 0.85;
+    font-size: 0.95rem;
+}
+
+.as-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.as-stat {
+    background: white;
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 2px 12px rgba(26,26,140,0.08);
+    border: 1px solid #f0f0f0;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.as-stat:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(26,26,140,0.12);
+}
+
+.as-stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+}
+
+.as-stat-icon.blue {
+    background: linear-gradient(135deg, #1a1a8c, #3730a3);
+}
+
+.as-stat-icon.cyan {
+    background: linear-gradient(135deg, #06b6d4, #0891b2);
+}
+
+.as-stat-value {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #1a1a8c;
+    line-height: 1;
+}
+
+.as-stat-label {
+    font-size: 0.78rem;
+    color: #6b7280;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.as-table-section {
+    background: white;
+    border-radius: 14px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 12px rgba(26,26,140,0.08);
+    border: 1px solid #f0f0f0;
+}
+
+.as-table-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1a1a8c;
+}
+
+.app-cards-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.app-card {
+    background: #f8fafc;
+    border: 1px solid #e8edf5;
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    transition: box-shadow 0.2s, transform 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.app-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, #1a1a8c, #c026d3);
+    border-radius: 4px 0 0 4px;
+}
+
+.app-card:hover {
+    box-shadow: 0 6px 20px rgba(26,26,140,0.1);
+    transform: translateY(-2px);
+    background: white;
+}
+
+.app-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.6rem;
+}
+
+.app-card-candidate {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 0.95rem;
+}
+
+.app-card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1a1a8c;
+    margin-bottom: 0.5rem;
+}
+
+.app-card-meta {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    font-size: 0.84rem;
+    color: #64748b;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.app-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 0.75rem;
+    border-top: 1px solid #f1f5f9;
+}
+
+.app-card-date {
+    font-size: 0.8rem;
+    color: #94a3b8;
+}
+
+.app-card-details-btn {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #1a1a8c;
+    text-decoration: none;
+    padding: 0.3rem 0.75rem;
+    border-radius: 7px;
+    border: 1.5px solid #c7d2fe;
+    background: #eef2ff;
+    transition: all 0.2s;
+}
+
+.app-card-details-btn:hover {
+    background: #1a1a8c;
+    color: white;
+    border-color: #1a1a8c;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.badge-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge-validated {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.badge-rejected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.badge-in_progress {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #9ca3af;
+    font-size: 0.95rem;
+}
+
+@media (max-width: 768px) {
+    .as-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .as-header {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .app-card-footer {
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: flex-start;
+    }
+
+    .app-card-meta {
+        flex-direction: column;
+        gap: 0.4rem;
+        align-items: flex-start;
+    }
+}

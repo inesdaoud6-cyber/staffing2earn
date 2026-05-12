@@ -1,0 +1,294 @@
+.apropos-hero {
+    background: linear-gradient(135deg, #1a1a8c 0%, #3730a3 50%, #06b6d4 100%);
+    border-radius: 20px;
+    padding: 3rem 2.5rem;
+    color: white;
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.apropos-hero h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    margin: 0 0 0.75rem 0;
+}
+
+.apropos-hero p {
+    opacity: 0.9;
+    font-size: 1.05rem;
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.7;
+}
+
+.apropos-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+}
+
+.apropos-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.75rem;
+    box-shadow: 0 2px 16px rgba(26,26,140,0.09);
+    border: 1px solid #f0f0f0;
+    text-align: center;
+    transition: all 0.25s;
+}
+
+.apropos-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 30px rgba(26,26,140,0.14);
+}
+
+.apropos-card-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    margin: 0 auto 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+}
+
+.apropos-card-icon.blue {
+    background: linear-gradient(135deg, #1a1a8c, #3730a3);
+}
+
+.apropos-card-icon.cyan {
+    background: linear-gradient(135deg, #06b6d4, #0891b2);
+}
+
+.apropos-card-icon.purple {
+    background: linear-gradient(135deg, #c026d3, #9333ea);
+}
+
+.apropos-card h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #1a1a8c;
+    margin-bottom: 0.5rem;
+}
+
+.apropos-card p {
+    font-size: 0.88rem;
+    color: #6b7280;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.temoignages-section {
+    margin-bottom: 2rem;
+}
+
+.temoignages-title {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #1a1a8c;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.temoignages-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.temoignage-card {
+    background: white;
+    border-radius: 14px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 12px rgba(26,26,140,0.08);
+    border: 1px solid #f0f0f0;
+    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.temoignage-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(26,26,140,0.12);
+}
+
+.temoignage-quote {
+    position: absolute;
+    top: 1rem;
+    right: 1.25rem;
+    font-size: 3rem;
+    color: #e5e7eb;
+    line-height: 1;
+    font-family: serif;
+}
+
+.temoignage-stars {
+    color: #f59e0b;
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.temoignage-text {
+    font-size: 0.9rem;
+    color: #374151;
+    line-height: 1.7;
+    margin-bottom: 1rem;
+    font-style: italic;
+}
+
+.temoignage-author {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.temoignage-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1a1a8c, #3730a3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+    text-transform: uppercase;
+}
+
+.temoignage-name {
+    font-weight: 700;
+    color: #1a1a8c;
+    font-size: 0.88rem;
+}
+
+.temoignage-date {
+    font-size: 0.75rem;
+    color: #9ca3af;
+}
+
+.form-section {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 2px 16px rgba(26,26,140,0.09);
+    border: 1px solid #f0f0f0;
+    margin-bottom: 2rem;
+}
+
+.form-section-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1a1a8c;
+    margin-bottom: 1.25rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.4rem;
+}
+
+.form-textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    border: 2px solid #e5e7eb;
+    font-size: 0.9rem;
+    color: #374151;
+    resize: vertical;
+    min-height: 100px;
+    transition: border-color 0.2s;
+    font-family: inherit;
+}
+
+.form-textarea:focus {
+    outline: none;
+    border-color: #1a1a8c;
+}
+
+.stars-input {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.star-btn {
+    font-size: 1.6rem;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    line-height: 1;
+    transition: transform 0.1s;
+    color: #d1d5db;
+}
+
+.star-btn.active {
+    color: #f59e0b;
+}
+
+.star-btn:hover {
+    transform: scale(1.2);
+}
+
+.submit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.75rem;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    background: linear-gradient(135deg, #1a1a8c, #3730a3);
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 14px rgba(26,26,140,0.35);
+}
+
+.submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(26,26,140,0.45);
+}
+
+.empty-temoignages {
+    text-align: center;
+    padding: 2rem;
+    color: #9ca3af;
+    font-size: 0.95rem;
+}
+
+@media (max-width: 768px) {
+    .apropos-hero {
+        padding: 2rem 1.25rem;
+    }
+
+    .apropos-hero h1 {
+        font-size: 1.5rem;
+    }
+
+    .apropos-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .temoignages-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .submit-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}

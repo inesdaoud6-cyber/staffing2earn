@@ -1,0 +1,42 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: #333;
+}
+
+.btn {
+    display: inline-block;
+    padding: 0.75rem 2rem;
+    background: #1a1a8c;
+    color: white;
+    text-decoration: none;
+    border-radius: 10px;
+    transition: all 0.2s;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+}
+.btn:hover { background: #3730a3; transform: translateY(-2px); }
+.btn-primary { background: #1a1a8c; }
+.btn-primary:hover { background: #3730a3; }
+.btn-danger { background: #dc2626; }
+.btn-danger:hover { background: #b91c1c; }
+
+.mt-4 { margin-top: 1rem; }
+.mb-4 { margin-bottom: 1rem; }
+.mb-6 { margin-bottom: 1.5rem; }
+.mb-8 { margin-bottom: 2rem; }
+.p-6 { padding: 1.5rem; }
+.text-center { text-align: center; }
+.font-bold { font-weight: bold; }
+.font-semibold { font-weight: 600; }
+
+@media (max-width: 768px) {
+    .btn { width: 100%; text-align: center; }
+}
