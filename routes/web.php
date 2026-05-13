@@ -53,11 +53,6 @@ Route::middleware('auth')->group(function () {
     })->middleware('throttle:6,1')->name('verification.send');
 });
 
-Route::prefix('candidate')->name('candidate.')->middleware(['auth'])->group(function () {
-    Route::get('/dashboard', fn () => redirect(route('filament.candidate.pages.dashboard')))
-        ->name('dashboard');
-});
-
 Route::group([
     'prefix'     => 'translations',
     'middleware' => ['web', 'auth', AdminMiddleware::class],

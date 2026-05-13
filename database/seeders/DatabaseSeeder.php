@@ -18,11 +18,9 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolesAndPermissionsSeeder::class,
             SuperAdminSeeder::class,
-
             TestSeeder::class,
-            OffreSeeder::class,
-            CandidateSeeder::class,
-
+            // OffreSeeder::class,     // TODO: file missing; re-enable when implemented
+            // CandidateSeeder::class, // TODO: file missing; re-enable when implemented
         ]);
     }
 }

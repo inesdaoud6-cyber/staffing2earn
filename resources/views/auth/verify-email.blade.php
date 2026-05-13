@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ __('verify.title') }} - Staffing2Earn</title>
-    @vite(['resources/css/global.css', 'resources/css/auth/login.css', 'resources/css/auth/verify.css'])
+    @vite(['resources/css/global.css', 'resources/css/auth/login.css', 'resources/css/auth/verify-email.css'])
 </head>
 <body>
     <div class="verify-page-wrapper">

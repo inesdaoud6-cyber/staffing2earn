@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ApplicationProgress extends Model
 {
+    protected $table = 'application_progress';
+
     protected $fillable = [
         'candidate_id',
         'offre_id',

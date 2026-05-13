@@ -57,9 +57,11 @@ class TestResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListTests::route('/'),
-            'create' => Pages\CreateTest::route('/create'),
-            'edit'   => Pages\EditTest::route('/{record}/edit'),
+            'index'     => Pages\ListTests::route('/'),
+            'create'    => Pages\CreateTest::route('/create'),
+            'edit'      => Pages\EditTest::route('/{record}/edit'),
+            'questions' => Pages\ManageTestQuestions::route('/{record}/questions'),
+            'view'      => Pages\ViewTest::route('/{record}'),
         ];
     }
 }

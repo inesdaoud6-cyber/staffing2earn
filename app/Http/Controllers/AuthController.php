@@ -8,6 +8,7 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 
@@ -91,13 +92,17 @@ class AuthController extends Controller
             'email.unique' => __('This email is already registered. Please login instead.'),
         ]);
 
-        $user = User::create([
-            'name'     => trim($validated['first_name'] . ' ' . $validated['last_name']),
-            'email'    => $validated['email'],
-            'password' => Hash::make($validated['password']),
-        ]);
+        $user = DB::transaction(function () use ($validated) {
+            $user = User::create([
+                'name'     => trim($validated['first_name'] . ' ' . $validated['last_name']),
+                'email'    => $validated['email'],
+                'password' => Hash::make($validated['password']),
+            ]);
 
-        $this->candidateService->createFromUser($user, $validated);
+            $this->candidateService->createFromUser($user, $validated);
+
+            return $user;
+        });
 
         event(new Registered($user));
 

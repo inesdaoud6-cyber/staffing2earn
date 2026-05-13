@@ -22,6 +22,7 @@ class Dashboard extends Page
     public int $pendingApplications = 0;
     public int $completedApplications = 0;
     public $recentApplications;
+    public ?ApplicationProgress $activeApplication = null;
 
     public function mount(): void
     {
@@ -39,6 +40,13 @@ class Dashboard extends Page
             $this->pendingApplications   = (clone $apps)->whereIn('status', ['pending', 'in_progress'])->count();
             $this->completedApplications = (clone $apps)->where('status', 'validated')->count();
             $this->recentApplications    = (clone $apps)->with('offre')->latest()->take(5)->get();
+
+            $this->activeApplication = ApplicationProgress::query()
+                ->where('candidate_id', $candidate->id)
+                ->where('is_archived', false)
+                ->whereIn('status', ['pending', 'in_progress'])
+                ->latest()
+                ->first();
         } else {
             $this->recentApplications = collect();
         }

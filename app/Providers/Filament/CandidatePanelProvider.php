@@ -71,8 +71,8 @@ class CandidatePanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
             ])
             ->authMiddleware([
-                Authenticate::class,
                 CandidateMiddleware::class,
+                Authenticate::class,
             ]);
     }
 }
