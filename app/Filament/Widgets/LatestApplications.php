@@ -15,7 +15,13 @@ class LatestApplications extends BaseWidget
     public function table(Table $table): Table
     {
         return $table
-            ->query(ApplicationProgress::with(['candidate.user', 'offre'])->latest()->limit(8))
+            ->query(
+                ApplicationProgress::query()
+                    ->with(['candidate.user', 'offre'])
+                    ->where('status', '!=', 'cancelled')
+                    ->latest()
+                    ->limit(8)
+            )
             ->columns([
                 TextColumn::make('candidate.full_name')
                     ->label('Candidat')

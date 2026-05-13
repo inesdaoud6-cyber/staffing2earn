@@ -13,7 +13,7 @@ class StatsOverview extends BaseWidget
     protected function getStats(): array
     {
         $totalCandidates   = Candidate::count();
-        $totalApplications = ApplicationProgress::count();
+        $totalApplications = ApplicationProgress::where('status', '!=', 'cancelled')->count();
         $pendingCount      = ApplicationProgress::where('status', 'pending')->count();
         $validatedCount    = ApplicationProgress::where('status', 'validated')->count();
         $publishedOffers   = Offre::where('is_published', true)->count();

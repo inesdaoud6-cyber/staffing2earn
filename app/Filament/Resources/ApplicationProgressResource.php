@@ -7,6 +7,8 @@ use App\Models\ApplicationProgress;
 use App\Models\CandidateNotification;
 use App\Models\Offre;
 use Closure;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\HtmlString;
 use Filament\Forms;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
@@ -47,9 +49,42 @@ class ApplicationProgressResource extends Resource
         return __('admin.applications');
     }
 
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->where('status', '!=', 'cancelled');
+    }
+
     public static function form(Form $form): Form
     {
         return $form->schema([
+            Forms\Components\Section::make(__('admin.application_cv_section'))
+                ->description(__('admin.application_cv_section_hint'))
+                ->schema([
+                    Forms\Components\Placeholder::make('cv_review')
+                        ->label(__('admin.application_cv'))
+                        ->content(function (?ApplicationProgress $record): HtmlString {
+                            if (! $record) {
+                                return new HtmlString('');
+                            }
+                            $url = $record->cvPublicUrl();
+                            if (! $url) {
+                                return new HtmlString(
+                                    '<p class="text-sm text-gray-500 dark:text-gray-400">' . e(__('admin.application_no_cv')) . '</p>'
+                                );
+                            }
+
+                            return new HtmlString(
+                                '<a href="' . e($url) . '" target="_blank" rel="noopener noreferrer" '
+                                . 'class="fi-btn relative grid-flow-col items-center justify-center font-semibold outline-none transition duration-75 focus-visible:ring-2 rounded-lg fi-btn-color-primary fi-btn-variant outlined fi-size-md gap-1.5 px-3 py-2 text-sm inline-flex">'
+                                . e(__('admin.application_view_cv_open'))
+                                . '</a>'
+                            );
+                        })
+                        ->visibleOn('edit'),
+                ])
+                ->columns(1)
+                ->visibleOn('edit'),
             Forms\Components\Section::make(__('admin.application_section_info'))->schema([
                 Forms\Components\Select::make('candidate_id')
                     ->label(__('nav.candidate'))
@@ -65,6 +100,12 @@ class ApplicationProgressResource extends Resource
                     ->options(Offre::pluck('title', 'id'))
                     ->searchable()
                     ->placeholder(__('Open application')),
+                Forms\Components\Select::make('test_id')
+                    ->label(__('admin.application_associated_test'))
+                    ->relationship('test', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->helperText(__('admin.application_associated_test_hint')),
                 Forms\Components\Select::make('status')
                     ->label(__('Status'))
                     ->options([
@@ -124,7 +165,7 @@ class ApplicationProgressResource extends Resource
             ->recordUrl(fn (ApplicationProgress $record): string => static::getUrl('edit', ['record' => $record]))
             ->filters(self::applicationProgressTableFilters())
             ->actions(self::applicationProgressTableActions())
-            ->bulkActions(self::applicationProgressTableBulkActions());
+            ->bulkActions([]);
     }
 
     /**
@@ -283,7 +324,6 @@ class ApplicationProgressResource extends Resource
                     'in_progress' => __('In Progress'),
                     'validated'   => __('Validated'),
                     'rejected'    => __('Rejected'),
-                    'cancelled'   => __('Cancelled'),
                 ]),
             Tables\Filters\SelectFilter::make('offre_id')
                 ->label(__('nav.job_offer'))
@@ -356,7 +396,7 @@ class ApplicationProgressResource extends Resource
                             ->success()
                             ->send();
                     })
-                    ->visible(fn (ApplicationProgress $record) => in_array($record->status, ['in_progress', 'pending'], true)),
+                    ->visible(fn (ApplicationProgress $record) => $record->status === 'in_progress'),
                 Tables\Actions\Action::make('rejeter')
                     ->label(__('admin.application_action_reject'))
                     ->icon('heroicon-o-x-circle')
@@ -406,21 +446,6 @@ class ApplicationProgressResource extends Resource
                 ->button()
                 ->outlined()
                 ->size('sm'),
-        ];
-    }
-
-    /**
-     * @return array<int, Tables\Actions\BulkAction>
-     */
-    private static function applicationProgressTableBulkActions(): array
-    {
-        return [
-            Tables\Actions\BulkAction::make('archiver')
-                ->label(__('admin.application_action_archive'))
-                ->icon('heroicon-o-archive-box')
-                ->requiresConfirmation()
-                ->modalHeading(__('admin.application_action_archive_heading'))
-                ->action(fn ($records) => $records->each->update(['is_archived' => true])),
         ];
     }
 

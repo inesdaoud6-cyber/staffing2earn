@@ -65,6 +65,21 @@ class ApplicationProgress extends Model
         return $query->where('candidate_id', $candidateId);
     }
 
+    /**
+     * CV stored on the application row, or fallback to the candidate profile CV.
+     */
+    public function resolveCvStoragePath(): ?string
+    {
+        return $this->cv_path ?: $this->candidate?->cv_path;
+    }
+
+    public function cvPublicUrl(): ?string
+    {
+        $path = $this->resolveCvStoragePath();
+
+        return $path ? asset('storage/' . $path) : null;
+    }
+
     public function isTimeLimitExceeded(): bool
     {
         if (! $this->level_started_at || ! $this->test) {
