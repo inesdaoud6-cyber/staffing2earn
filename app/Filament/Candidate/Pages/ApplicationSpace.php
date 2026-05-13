@@ -4,6 +4,7 @@ namespace App\Filament\Candidate\Pages;
 
 use App\Models\ApplicationProgress;
 use App\Models\Candidate;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 
 class ApplicationSpace extends Page
@@ -66,6 +67,50 @@ class ApplicationSpace extends Page
 
     public function updatedFilterStatus(): void
     {
+        $this->loadApplications();
+    }
+
+    /**
+     * Candidate-initiated cancellation. Only allowed while the application is
+     * still pending or in progress — once an admin has validated or rejected
+     * it, the candidate can no longer cancel.
+     */
+    public function cancelApplication(int $id): void
+    {
+        if ($this->isAdminViewing) {
+            return;
+        }
+
+        $candidate = Candidate::where('user_id', auth()->id())->first();
+        if (! $candidate) {
+            Notification::make()->title(__('Candidate profile not found.'))->danger()->send();
+            return;
+        }
+
+        $app = ApplicationProgress::where('id', $id)
+            ->where('candidate_id', $candidate->id)
+            ->first();
+
+        if (! $app) {
+            Notification::make()->title(__('Application not found.'))->danger()->send();
+            return;
+        }
+
+        if (! in_array($app->status, ['pending', 'in_progress'], true)) {
+            Notification::make()
+                ->title(__('This application can no longer be cancelled.'))
+                ->warning()
+                ->send();
+            return;
+        }
+
+        $app->update(['status' => 'cancelled']);
+
+        Notification::make()
+            ->title(__('Application cancelled.'))
+            ->success()
+            ->send();
+
         $this->loadApplications();
     }
 }

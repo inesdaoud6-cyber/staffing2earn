@@ -13,12 +13,12 @@
             <div class="cc-icon cc-icon-blue">📋</div>
             <div class="cc-title">{{ __('Free Application') }}</div>
             <div class="cc-desc">{{ __('Apply without a specific offer. The admin will suggest a suitable test for you.') }}</div>
-            <button wire:click="candidatLibre"
+            <button wire:click="startApplyFree"
                 class="cc-btn cc-btn-blue"
                 wire:loading.attr="disabled"
-                wire:target="candidatLibre">
-                <span wire:loading.remove wire:target="candidatLibre">✨ {{ __('Choose this option') }}</span>
-                <span wire:loading wire:target="candidatLibre">⏳...</span>
+                wire:target="startApplyFree">
+                <span wire:loading.remove wire:target="startApplyFree">✨ {{ __('Choose this option') }}</span>
+                <span wire:loading wire:target="startApplyFree">⏳...</span>
             </button>
         </div>
 
@@ -50,12 +50,12 @@
                             @endif
                         </div>
                     </div>
-                    <button wire:click="candidateOffre({{ $offre->id }})"
+                    <button wire:click="startApplyOffre({{ $offre->id }})"
                         class="offre-apply-btn"
                         wire:loading.attr="disabled"
-                        wire:target="candidateOffre({{ $offre->id }})">
-                        <span wire:loading.remove wire:target="candidateOffre({{ $offre->id }})">{{ __('Apply to an Offer') }} →</span>
-                        <span wire:loading wire:target="candidateOffre({{ $offre->id }})">⏳</span>
+                        wire:target="startApplyOffre({{ $offre->id }})">
+                        <span wire:loading.remove wire:target="startApplyOffre({{ $offre->id }})">{{ __('Apply to an Offer') }} →</span>
+                        <span wire:loading wire:target="startApplyOffre({{ $offre->id }})">⏳</span>
                     </button>
                 </div>
                 @endforeach
@@ -71,4 +71,89 @@
             @endif
         </div>
     </div>
+
+    {{-- CV-choice modal --}}
+    @if($cvDialogOpen)
+    <div class="cv-dialog-backdrop" wire:click.self="cancelCvDialog">
+        <div class="cv-dialog" role="dialog" aria-modal="true" aria-labelledby="cvDialogTitle">
+            <button type="button" class="cv-dialog-close" wire:click="cancelCvDialog" aria-label="{{ __('Close') }}">✕</button>
+
+            <div class="cv-dialog-header">
+                <div class="cv-dialog-icon">📄</div>
+                <div>
+                    <div class="cv-dialog-eyebrow">{{ __('Applying to') }}</div>
+                    <h3 id="cvDialogTitle" class="cv-dialog-title">{{ $pendingOffreTitle }}</h3>
+                </div>
+            </div>
+
+            <p class="cv-dialog-desc">
+                {{ __('Choose which CV to send to the admin for review. Your application stays in "pending" status until the admin approves it.') }}
+            </p>
+
+            <div class="cv-dialog-options">
+                {{-- Option 1: profile CV --}}
+                <div class="cv-dialog-option {{ $hasProfileCv ? '' : 'cv-dialog-option-disabled' }}">
+                    <div class="cv-dialog-option-icon">👤</div>
+                    <div class="cv-dialog-option-body">
+                        <div class="cv-dialog-option-title">{{ __('Use my profile CV') }}</div>
+                        <div class="cv-dialog-option-desc">
+                            @if($hasProfileCv)
+                                {{ __('Send the CV currently saved on your profile.') }}
+                            @else
+                                {{ __('No CV on file yet — upload one to use this option, or upload a new CV below.') }}
+                            @endif
+                        </div>
+                        <button type="button"
+                                class="cv-dialog-btn cv-dialog-btn-primary"
+                                wire:click="applyWithProfileCv"
+                                wire:loading.attr="disabled"
+                                wire:target="applyWithProfileCv"
+                                @disabled(! $hasProfileCv)>
+                            <span wire:loading.remove wire:target="applyWithProfileCv">✅ {{ __('Send profile CV') }}</span>
+                            <span wire:loading wire:target="applyWithProfileCv">⏳ {{ __('Submitting...') }}</span>
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Option 2: new CV --}}
+                <div class="cv-dialog-option">
+                    <div class="cv-dialog-option-icon">📤</div>
+                    <div class="cv-dialog-option-body">
+                        <div class="cv-dialog-option-title">{{ __('Upload a new CV') }}</div>
+                        <div class="cv-dialog-option-desc">
+                            {{ __('PDF only, 5 MB max. The uploaded file will also replace your profile CV.') }}
+                        </div>
+                        <input type="file" wire:model="newCv" accept="application/pdf" class="cv-dialog-file">
+
+                        <div wire:loading wire:target="newCv" class="cv-dialog-hint">⏳ {{ __('Uploading...') }}</div>
+
+                        @if($newCv)
+                            <div class="cv-dialog-hint cv-dialog-hint-ok">
+                                ✔ {{ __('Ready to submit:') }} {{ method_exists($newCv, 'getClientOriginalName') ? $newCv->getClientOriginalName() : __('file selected') }}
+                            </div>
+                        @endif
+
+                        @error('newCv') <div class="cv-dialog-error">{{ $message }}</div> @enderror
+
+                        <button type="button"
+                                class="cv-dialog-btn cv-dialog-btn-success"
+                                wire:click="applyWithNewCv"
+                                wire:loading.attr="disabled"
+                                wire:target="applyWithNewCv,newCv"
+                                @disabled(! $newCv)>
+                            <span wire:loading.remove wire:target="applyWithNewCv">⬆ {{ __('Submit application with this CV') }}</span>
+                            <span wire:loading wire:target="applyWithNewCv">⏳ {{ __('Submitting...') }}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cv-dialog-footer">
+                <button type="button" class="cv-dialog-btn cv-dialog-btn-ghost" wire:click="cancelCvDialog">
+                    {{ __('Cancel') }}
+                </button>
+            </div>
+        </div>
+    </div>
+    @endif
 </x-filament-panels::page>

@@ -216,6 +216,69 @@
     color: #1e40af;
 }
 
+.badge-cancelled {
+    background: #e5e7eb;
+    color: #4b5563;
+}
+
+.app-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.app-card-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.35rem 0.8rem;
+    border-radius: 7px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+    white-space: nowrap;
+}
+.app-card-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.app-card-btn:not(:disabled):hover { transform: translateY(-1px); }
+
+.app-card-btn-primary {
+    background: linear-gradient(135deg, #1a1a8c, #3730a3);
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(26,26,140,0.25);
+}
+
+.app-card-btn-cancel {
+    background: #fff;
+    color: #b91c1c;
+    border: 1.5px solid #fecaca;
+}
+.app-card-btn-cancel:hover { background: #fee2e2; }
+
+.app-card-btn-admin {
+    background: #f59e0b;
+    color: #fff;
+    padding: 0.35rem 0.75rem;
+}
+
+.app-card-btn-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 7px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #92400e;
+    background: #fef3c7;
+    border: 1px solid #fde68a;
+    white-space: nowrap;
+}
+
 .empty-state {
     text-align: center;
     padding: 3rem;

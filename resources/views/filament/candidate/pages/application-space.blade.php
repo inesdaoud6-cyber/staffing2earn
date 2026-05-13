@@ -43,6 +43,7 @@
                 <option value="in_progress">{{ __('In Progress') }}</option>
                 <option value="validated">{{ __('Validated') }}</option>
                 <option value="rejected">{{ __('Rejected') }}</option>
+                <option value="cancelled">{{ __('Cancelled') }}</option>
             </select>
         </div>
 
@@ -58,6 +59,7 @@
                             'in_progress' => __('In Progress'),
                             'validated'   => __('Validated'),
                             'rejected'    => __('Rejected'),
+                            'cancelled'   => __('Cancelled'),
                             default       => $app->status
                         } }}
                     </span>
@@ -86,22 +88,42 @@
 
                 <div class="app-card-footer">
                     <span class="app-card-date">{{ $app->created_at->diffForHumans() }}</span>
-                    <div style="display:flex;gap:0.5rem;align-items:center;">
-                        @if(in_array($app->status, ['in_progress', 'pending']))
-                        <a href="/candidate/take-test"
-                           style="background:linear-gradient(135deg,#1a1a8c,#3730a3);color:white;padding:0.3rem 0.75rem;border-radius:7px;font-size:0.78rem;font-weight:700;text-decoration:none;">
-                            📝 {{ __('Take the test') }}
-                        </a>
+                    <div class="app-card-actions">
+                        @if($app->status === 'in_progress')
+                            <a href="/candidate/take-test" class="app-card-btn app-card-btn-primary">
+                                📝 {{ __('Take the test') }}
+                            </a>
+                        @elseif($app->status === 'pending')
+                            <span class="app-card-btn-note" title="{{ __('Awaiting admin review') }}">
+                                ⏳ {{ __('Waiting for admin review') }}
+                            </span>
                         @else
-                        <a href="/candidate/applications" class="app-card-details-btn">
-                            {{ __('View details') }} →
-                        </a>
+                            <a href="/candidate/applications" class="app-card-details-btn">
+                                {{ __('View details') }} →
+                            </a>
                         @endif
+
+                        @if(! $isAdminViewing && in_array($app->status, ['pending', 'in_progress']))
+                            <button type="button"
+                                    wire:click="cancelApplication({{ $app->id }})"
+                                    wire:loading.attr="disabled"
+                                    wire:target="cancelApplication({{ $app->id }})"
+                                    onclick="return confirm('{{ __('Cancel this application? This cannot be undone.') }}')"
+                                    class="app-card-btn app-card-btn-cancel">
+                                <span wire:loading.remove wire:target="cancelApplication({{ $app->id }})">
+                                    ✕ {{ __('Cancel') }}
+                                </span>
+                                <span wire:loading wire:target="cancelApplication({{ $app->id }})">
+                                    ⏳ {{ __('Cancelling') }}
+                                </span>
+                            </button>
+                        @endif
+
                         @can('view-candidate-scores')
-                        <a href="/admin/application-progresses/{{ $app->id }}/edit"
-                           style="background:#f59e0b;color:#fff;padding:0.3rem 0.7rem;border-radius:6px;font-size:0.78rem;text-decoration:none;">
-                            {{ __('Edit') }}
-                        </a>
+                            <a href="/admin/application-progresses/{{ $app->id }}/edit"
+                               class="app-card-btn app-card-btn-admin">
+                                {{ __('Edit') }}
+                            </a>
                         @endcan
                     </div>
                 </div>
