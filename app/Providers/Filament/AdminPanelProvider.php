@@ -39,7 +39,7 @@ class AdminPanelProvider extends PanelProvider
             ->sidebarCollapsibleOnDesktop()
             ->renderHook(
                 'panels::topbar.end',
-                fn () => view('partials.lang-switcher-topbar')
+                fn () => view('partials.admin-topbar-actions')
             )
             ->userMenuItems([
                 MenuItem::make()

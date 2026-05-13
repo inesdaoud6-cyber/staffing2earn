@@ -397,6 +397,7 @@
     white-space: nowrap;
 }
 .notif-chip-amber { background: #fef3c7; color: #92400e; }
+.notif-chip-blue  { background: #dbeafe; color: #1e40af; }
 .notif-chip-muted { background: #f3f4f6; color: #6b7280; }
 
 .notif-offer-desc {

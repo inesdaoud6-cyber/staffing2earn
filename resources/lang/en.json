@@ -1,1 +1,9 @@
-{}
+{
+    "admin.notifications_inbox": "Admin notifications",
+    "admin.notifications_empty": "No notifications yet.",
+    "admin.notifications_empty_hint": "When a candidate applies to an offer or submits a free application, you will see it here.",
+    "admin.review_application": "Review application",
+    "admin.notif_new_application_title": "New application",
+    "admin.notif_new_application_message": ":candidate (:email) applied for :offer.",
+    "Unknown candidate": "Unknown candidate"
+}
