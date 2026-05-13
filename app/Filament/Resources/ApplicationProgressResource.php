@@ -6,31 +6,51 @@ use App\Filament\Resources\ApplicationProgressResource\Pages;
 use App\Models\ApplicationProgress;
 use App\Models\CandidateNotification;
 use App\Models\Offre;
+use Closure;
 use Filament\Forms;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
-use Filament\Resources\Resource;
-use Filament\Tables;
-use Filament\Tables\Table;
 use Filament\Notifications\Notification;
+use Filament\Resources\Resource;
+use Filament\Support\Enums\FontWeight;
+use Filament\Tables;
+use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Columns\Layout\Split;
+use Filament\Tables\Columns\Layout\Stack;
+use Filament\Tables\Columns\TextColumn\TextColumnSize;
+use Filament\Tables\Table;
 
 class ApplicationProgressResource extends Resource
 {
     protected static ?string $model = ApplicationProgress::class;
-    protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
+
+    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+
     protected static ?string $navigationGroup = 'Recrutement';
+
     protected static ?int $navigationSort = 4;
 
-    public static function getNavigationLabel(): string { return __('admin.applications'); }
-    public static function getModelLabel(): string { return __('Application'); }
-    public static function getPluralModelLabel(): string { return __('admin.applications'); }
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.applications');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('Application');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('admin.applications');
+    }
 
     public static function form(Form $form): Form
     {
         return $form->schema([
-            Forms\Components\Section::make('Informations')->schema([
+            Forms\Components\Section::make(__('admin.application_section_info'))->schema([
                 Forms\Components\Select::make('candidate_id')
                     ->label(__('nav.candidate'))
                     ->options(
@@ -44,7 +64,7 @@ class ApplicationProgressResource extends Resource
                     ->label(__('nav.job_offer'))
                     ->options(Offre::pluck('title', 'id'))
                     ->searchable()
-                    ->placeholder('Candidature libre'),
+                    ->placeholder(__('Open application')),
                 Forms\Components\Select::make('status')
                     ->label(__('Status'))
                     ->options([
@@ -52,6 +72,7 @@ class ApplicationProgressResource extends Resource
                         'in_progress' => __('In Progress'),
                         'validated'   => __('Validated'),
                         'rejected'    => __('Rejected'),
+                        'cancelled'   => __('Cancelled'),
                     ])
                     ->required(),
                 Forms\Components\TextInput::make('current_level')
@@ -67,7 +88,7 @@ class ApplicationProgressResource extends Resource
                     ->numeric()
                     ->default(0),
                 Forms\Components\Toggle::make('apply_enabled')
-                    ->label('Candidature activée'),
+                    ->label(__('admin.application_toggle_apply_enabled')),
                 Forms\Components\Toggle::make('score_published')
                     ->label(__('admin.published')),
             ])->columns(2),
@@ -76,90 +97,220 @@ class ApplicationProgressResource extends Resource
 
     public static function table(Table $table): Table
     {
+        return self::configureTable($table, 'list');
+    }
+
+    public static function configureTable(Table $table, string $layout = 'list'): Table
+    {
+        $layout = in_array($layout, ['list', 'cards'], true) ? $layout : 'list';
+
+        $table = $table->defaultSort('created_at', 'desc');
+
+        if ($layout === 'cards') {
+            $table
+                ->striped(false)
+                ->contentGrid([
+                    'md' => 2,
+                    'xl' => 3,
+                ])
+                ->columns(self::applicationProgressCardColumns());
+        } else {
+            $table
+                ->striped()
+                ->columns(self::applicationProgressListColumns());
+        }
+
         return $table
-            ->contentGrid([
-                'md' => 2,
-                'xl' => 3,
-            ])
-            ->columns([
-                Tables\Columns\Layout\Stack::make([
-                    Tables\Columns\Layout\Split::make([
-                        Tables\Columns\TextColumn::make('candidate.user.name')
-                            ->label(__('admin.full_name'))
-                            ->searchable()
-                            ->sortable()
-                            ->weight('bold'),
-                        Tables\Columns\TextColumn::make('status')
-                            ->label(__('Status'))
-                            ->badge()
-                            ->formatStateUsing(fn ($state) => match ($state) {
-                                'pending'     => __('Pending'),
-                                'in_progress' => __('In Progress'),
-                                'validated'   => __('Validated'),
-                                'rejected'    => __('Rejected'),
-                                default       => $state,
-                            })
-                            ->color(fn ($state) => match ($state) {
-                                'validated'   => 'success',
-                                'rejected'    => 'danger',
-                                'in_progress' => 'info',
-                                default       => 'warning',
-                            }),
-                    ]),
-                    Tables\Columns\TextColumn::make('offre.title')
-                        ->label(__('nav.job_offer'))
-                        ->default('Candidature libre')
-                        ->searchable()
-                        ->icon('heroicon-o-briefcase')
-                        ->size('sm'),
-                    Tables\Columns\Layout\Split::make([
-                        Tables\Columns\TextColumn::make('current_level')
-                            ->label(__('Level'))
-                            ->badge()
-                            ->color('info')
-                            ->prefix('Niv. ')
-                            ->sortable(),
-                        Tables\Columns\TextColumn::make('main_score')
-                            ->label(__('Score'))
-                            ->badge()
-                            ->color('success')
-                            ->suffix('/100')
-                            ->sortable(),
-                        Tables\Columns\IconColumn::make('score_published')
-                            ->label(__('admin.published'))
-                            ->boolean(),
-                    ]),
+            ->recordUrl(fn (ApplicationProgress $record): string => static::getUrl('edit', ['record' => $record]))
+            ->filters(self::applicationProgressTableFilters())
+            ->actions(self::applicationProgressTableActions())
+            ->bulkActions(self::applicationProgressTableBulkActions());
+    }
+
+    /**
+     * @return array<int, Tables\Columns\Column>
+     */
+    private static function applicationProgressListColumns(): array
+    {
+        return [
+            Tables\Columns\TextColumn::make('candidate.user.name')
+                ->label(__('admin.application_column_applicant'))
+                ->description(fn (ApplicationProgress $record): ?string => $record->candidate?->user?->email)
+                ->searchable(query: self::applicantSearchQuery())
+                ->sortable(),
+            Tables\Columns\TextColumn::make('offre.title')
+                ->label(__('admin.application_column_offer'))
+                ->placeholder(__('Open application'))
+                ->searchable()
+                ->limit(36)
+                ->tooltip(fn (ApplicationProgress $record): ?string => $record->offre?->title),
+            Tables\Columns\TextColumn::make('status')
+                ->label(__('Status'))
+                ->badge()
+                ->formatStateUsing(fn ($state) => match ($state) {
+                    'pending'     => __('Pending'),
+                    'in_progress' => __('In Progress'),
+                    'validated'   => __('Validated'),
+                    'rejected'    => __('Rejected'),
+                    'cancelled'   => __('Cancelled'),
+                    default       => (string) $state,
+                })
+                ->color(fn ($state) => match ($state) {
+                    'validated'   => 'success',
+                    'rejected'    => 'danger',
+                    'cancelled'   => 'gray',
+                    'in_progress' => 'info',
+                    default       => 'warning',
+                }),
+            Tables\Columns\TextColumn::make('current_level')
+                ->label(__('Level'))
+                ->alignCenter()
+                ->sortable(),
+            Tables\Columns\TextColumn::make('main_score')
+                ->label(__('Score'))
+                ->suffix('/100')
+                ->alignEnd()
+                ->sortable(),
+            Tables\Columns\IconColumn::make('score_published')
+                ->label(__('admin.published'))
+                ->boolean()
+                ->alignCenter(),
+            Tables\Columns\TextColumn::make('created_at')
+                ->label(__('Date'))
+                ->dateTime('d/m/Y H:i')
+                ->sortable()
+                ->toggleable(isToggledHiddenByDefault: false),
+        ];
+    }
+
+    /**
+     * @return array<int, Stack>
+     */
+    private static function applicationProgressCardColumns(): array
+    {
+        return [
+            Stack::make([
+                Split::make([
+                    Tables\Columns\TextColumn::make('candidate.user.name')
+                        ->weight(FontWeight::Bold)
+                        ->searchable(query: self::applicantSearchQuery())
+                        ->sortable(),
                     Tables\Columns\TextColumn::make('created_at')
                         ->label(__('Date'))
-                        ->dateTime('d/m/Y')
-                        ->sortable()
+                        ->dateTime('d/m/Y H:i')
+                        ->size(TextColumnSize::ExtraSmall)
                         ->color('gray')
-                        ->size('sm'),
-                ])->space(2),
+                        ->alignEnd()
+                        ->sortable(),
+                ]),
+                Tables\Columns\TextColumn::make('candidate.user.email')
+                    ->label(__('Email'))
+                    ->icon('heroicon-o-envelope')
+                    ->size(TextColumnSize::Small)
+                    ->color('gray')
+                    ->copyable(),
+                Tables\Columns\TextColumn::make('offre.title')
+                    ->label(__('admin.application_column_offer'))
+                    ->placeholder(__('Open application'))
+                    ->searchable()
+                    ->weight(FontWeight::Medium)
+                    ->limit(48)
+                    ->tooltip(fn (ApplicationProgress $record): ?string => $record->offre?->title),
+                Split::make([
+                    Tables\Columns\TextColumn::make('status')
+                        ->label(__('Status'))
+                        ->badge()
+                        ->formatStateUsing(fn ($state) => match ($state) {
+                            'pending'     => __('Pending'),
+                            'in_progress' => __('In Progress'),
+                            'validated'   => __('Validated'),
+                            'rejected'    => __('Rejected'),
+                            'cancelled'   => __('Cancelled'),
+                            default       => (string) $state,
+                        })
+                        ->color(fn ($state) => match ($state) {
+                            'validated'   => 'success',
+                            'rejected'    => 'danger',
+                            'cancelled'   => 'gray',
+                            'in_progress' => 'info',
+                            default       => 'warning',
+                        }),
+                    Tables\Columns\TextColumn::make('current_level')
+                        ->label(__('admin.application_column_level_short'))
+                        ->badge()
+                        ->color('gray')
+                        ->alignEnd(),
+                ]),
+                Split::make([
+                    Tables\Columns\TextColumn::make('main_score')
+                        ->label(__('Score'))
+                        ->suffix('/100')
+                        ->weight(FontWeight::SemiBold),
+                    Tables\Columns\IconColumn::make('score_published')
+                        ->label(__('admin.published'))
+                        ->boolean()
+                        ->alignEnd(),
+                ]),
             ])
-            ->filters([
-                Tables\Filters\SelectFilter::make('status')
-                    ->label(__('Status'))
-                    ->options([
-                        'pending'     => __('Pending'),
-                        'in_progress' => __('In Progress'),
-                        'validated'   => __('Validated'),
-                        'rejected'    => __('Rejected'),
-                    ]),
-                Tables\Filters\SelectFilter::make('offre_id')
-                    ->label(__('nav.job_offer'))
-                    ->options(Offre::pluck('title', 'id')),
-            ])
-            ->actions([
+                ->space(3)
+                ->extraAttributes(['class' => 'application-progress-card']),
+        ];
+    }
+
+    /**
+     * @return Closure(object, string): void
+     */
+    private static function applicantSearchQuery(): Closure
+    {
+        return function ($query, string $search): void {
+            $query->whereHas('candidate.user', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        };
+    }
+
+    /**
+     * @return array<int, Tables\Filters\BaseFilter>
+     */
+    private static function applicationProgressTableFilters(): array
+    {
+        return [
+            Tables\Filters\SelectFilter::make('status')
+                ->label(__('Status'))
+                ->options([
+                    'pending'     => __('Pending'),
+                    'in_progress' => __('In Progress'),
+                    'validated'   => __('Validated'),
+                    'rejected'    => __('Rejected'),
+                    'cancelled'   => __('Cancelled'),
+                ]),
+            Tables\Filters\SelectFilter::make('offre_id')
+                ->label(__('nav.job_offer'))
+                ->options(Offre::pluck('title', 'id')),
+        ];
+    }
+
+    /**
+     * @return array<int, Tables\Actions\Action|Tables\Actions\ActionGroup>
+     */
+    private static function applicationProgressTableActions(): array
+    {
+        return [
+            Tables\Actions\EditAction::make()
+                ->label(__('Edit'))
+                ->iconButton(),
+            ActionGroup::make([
                 Tables\Actions\Action::make('valider_niveau')
-                    ->label('✅ Valider niveau → suivant')
+                    ->label(__('admin.application_action_validate_level'))
                     ->icon('heroicon-o-arrow-up-circle')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->modalHeading('Valider ce niveau et passer au suivant ?')
-                    ->modalDescription('Le candidat sera notifié et pourra répondre aux questions du niveau suivant.')
-                    ->action(function ($record) {
+                    ->modalHeading(__('admin.application_action_validate_level_heading'))
+                    ->modalDescription(__('admin.application_action_validate_level_description'))
+                    ->action(function (ApplicationProgress $record) {
                         $newLevel = $record->current_level + 1;
+                        $oldLevel = $record->current_level;
                         $record->update([
                             'current_level' => $newLevel,
                             'status'        => 'in_progress',
@@ -167,81 +318,110 @@ class ApplicationProgressResource extends Resource
                         CandidateNotification::create([
                             'user_id'  => $record->candidate->user_id,
                             'type'     => 'info',
-                            'title'    => '🎯 Niveau ' . ($newLevel - 1) . ' validé !',
-                            'message'  => 'Bravo ! Votre niveau ' . ($newLevel - 1) . ' a été validé par l\'administrateur. Vous pouvez maintenant passer au niveau ' . $newLevel . '.',
+                            'title'    => __('admin.candidate_notif_level_validated_title'),
+                            'message'  => __('admin.candidate_notif_level_validated_body', [
+                                'old' => (string) $oldLevel,
+                                'new' => (string) $newLevel,
+                            ]),
                             'offre_id' => $record->offre_id,
                         ]);
                         Notification::make()
-                            ->title('Niveau ' . ($newLevel - 1) . ' validé — Niveau ' . $newLevel . ' débloqué !')
+                            ->title(__('admin.application_toast_level_advanced', [
+                                'old' => (string) $oldLevel,
+                                'new' => (string) $newLevel,
+                            ]))
                             ->success()
                             ->send();
                     })
-                    ->visible(fn ($record) => $record->status === 'in_progress'),
-
+                    ->visible(fn (ApplicationProgress $record) => $record->status === 'in_progress'),
                 Tables\Actions\Action::make('valider_finale')
-                    ->label('🏆 Valider définitivement')
+                    ->label(__('admin.application_action_validate_final'))
                     ->icon('heroicon-o-check-badge')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->modalHeading('Valider définitivement cette candidature ?')
-                    ->action(function ($record) {
+                    ->modalHeading(__('admin.application_action_validate_final_heading'))
+                    ->action(function (ApplicationProgress $record) {
                         $record->update(['status' => 'validated']);
                         CandidateNotification::create([
                             'user_id'  => $record->candidate->user_id,
                             'type'     => 'validated',
-                            'title'    => '✅ Candidature acceptée !',
-                            'message'  => 'Félicitations ! Votre candidature' . ($record->offre ? ' pour l\'offre "' . $record->offre->title . '"' : '') . ' a été entièrement validée.',
+                            'title'    => __('admin.candidate_notif_validated_title'),
+                            'message'  => $record->offre
+                                ? __('admin.candidate_notif_validated_body_with_offer', ['offer' => $record->offre->title])
+                                : __('admin.candidate_notif_validated_body_open'),
                             'offre_id' => $record->offre_id,
                         ]);
-                        Notification::make()->title('Candidature validée + notification envoyée')->success()->send();
+                        Notification::make()
+                            ->title(__('admin.application_toast_application_validated'))
+                            ->success()
+                            ->send();
                     })
-                    ->visible(fn ($record) => in_array($record->status, ['in_progress', 'pending'])),
-
+                    ->visible(fn (ApplicationProgress $record) => in_array($record->status, ['in_progress', 'pending'], true)),
                 Tables\Actions\Action::make('rejeter')
-                    ->label('❌ Rejeter')
+                    ->label(__('admin.application_action_reject'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->modalHeading('Rejeter cette candidature ?')
-                    ->action(function ($record) {
+                    ->modalHeading(__('admin.application_action_reject_heading'))
+                    ->action(function (ApplicationProgress $record) {
                         $record->update(['status' => 'rejected']);
                         CandidateNotification::create([
                             'user_id'  => $record->candidate->user_id,
                             'type'     => 'rejected',
-                            'title'    => '❌ Candidature rejetée',
-                            'message'  => 'Votre candidature' . ($record->offre ? ' pour l\'offre "' . $record->offre->title . '"' : '') . ' n\'a pas été retenue.',
+                            'title'    => __('admin.candidate_notif_rejected_title'),
+                            'message'  => $record->offre
+                                ? __('admin.candidate_notif_rejected_body_with_offer', ['offer' => $record->offre->title])
+                                : __('admin.candidate_notif_rejected_body_open'),
                             'offre_id' => $record->offre_id,
                         ]);
-                        Notification::make()->title('Candidature rejetée + notification envoyée')->danger()->send();
+                        Notification::make()
+                            ->title(__('admin.application_toast_rejected'))
+                            ->danger()
+                            ->send();
                     })
-                    ->visible(fn ($record) => !in_array($record->status, ['rejected', 'validated'])),
-
+                    ->visible(fn (ApplicationProgress $record) => ! in_array($record->status, ['rejected', 'validated'], true)),
                 Tables\Actions\Action::make('publier_score')
-                    ->label('📊 Publier score')
-                    ->icon('heroicon-o-eye')
+                    ->label(__('admin.application_action_publish_score'))
+                    ->icon('heroicon-o-chart-bar')
                     ->color('warning')
-                    ->action(function ($record) {
+                    ->requiresConfirmation()
+                    ->action(function (ApplicationProgress $record) {
                         $record->update(['score_published' => true]);
                         CandidateNotification::create([
                             'user_id'  => $record->candidate->user_id,
                             'type'     => 'info',
-                            'title'    => '📊 Votre score est disponible !',
-                            'message'  => 'L\'administrateur a publié votre score : ' . $record->main_score . '/100.',
+                            'title'    => __('admin.candidate_notif_score_title'),
+                            'message'  => __('admin.candidate_notif_score_body', ['score' => (string) $record->main_score]),
                             'offre_id' => $record->offre_id,
                         ]);
-                        Notification::make()->title('Score publié + notification envoyée')->success()->send();
+                        Notification::make()
+                            ->title(__('admin.application_toast_score_published'))
+                            ->success()
+                            ->send();
                     })
-                    ->visible(fn ($record) => !$record->score_published),
-
-                Tables\Actions\EditAction::make()->label(__('Edit')),
+                    ->visible(fn (ApplicationProgress $record) => ! $record->score_published),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkAction::make('archiver')
-                    ->label('Archiver sélection')
-                    ->icon('heroicon-o-archive-box')
-                    ->requiresConfirmation()
-                    ->action(fn ($records) => $records->each->update(['is_archived' => true])),
-            ]);
+                ->label(__('Action'))
+                ->icon('heroicon-m-ellipsis-vertical')
+                ->button()
+                ->outlined()
+                ->size('sm'),
+        ];
+    }
+
+    /**
+     * @return array<int, Tables\Actions\BulkAction>
+     */
+    private static function applicationProgressTableBulkActions(): array
+    {
+        return [
+            Tables\Actions\BulkAction::make('archiver')
+                ->label(__('admin.application_action_archive'))
+                ->icon('heroicon-o-archive-box')
+                ->requiresConfirmation()
+                ->modalHeading(__('admin.application_action_archive_heading'))
+                ->action(fn ($records) => $records->each->update(['is_archived' => true])),
+        ];
     }
 
     public static function getPages(): array
