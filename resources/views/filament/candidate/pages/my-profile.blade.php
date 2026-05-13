@@ -37,56 +37,198 @@
     </div>
 
     <div class="profile-sections">
+        {{-- Personal Information --}}
         <div class="profile-section">
-            <div class="profile-section-title">👤 {{ __('Personal Information') }}</div>
+            <div class="profile-section-header">
+                <div class="profile-section-title">👤 {{ __('Personal Information') }}</div>
+                @cannot('view-candidate-scores')
+                    @if($editingPersonal)
+                        <div class="profile-section-actions">
+                            <button type="button" wire:click="savePersonal" class="profile-section-edit save">
+                                💾 <span>{{ __('Save') }}</span>
+                            </button>
+                            <button type="button" wire:click="cancelPersonal" class="profile-section-edit cancel">
+                                ✕ <span>{{ __('Cancel') }}</span>
+                            </button>
+                        </div>
+                    @else
+                        <button type="button" wire:click="editPersonal" class="profile-section-edit"
+                                title="{{ __('Edit') }}" aria-label="{{ __('Edit') }}">
+                            ✏️ <span>{{ __('Edit') }}</span>
+                        </button>
+                    @endif
+                @endcannot
+            </div>
+
             <div class="profile-row">
                 <span class="profile-row-label">{{ __('First Name') }}</span>
-                <span class="profile-row-value">{{ $candidate?->first_name ?? '—' }}</span>
+                @if($editingPersonal)
+                    <input type="text" wire:model="firstName" class="profile-row-input"
+                           placeholder="{{ __('First Name') }}">
+                @else
+                    <span class="profile-row-value">{{ $candidate?->first_name ?? '—' }}</span>
+                @endif
             </div>
+            @error('firstName') <div class="profile-row-error">{{ $message }}</div> @enderror
+
             <div class="profile-row">
                 <span class="profile-row-label">{{ __('Last Name') }}</span>
-                <span class="profile-row-value">{{ $candidate?->last_name ?? '—' }}</span>
+                @if($editingPersonal)
+                    <input type="text" wire:model="lastName" class="profile-row-input"
+                           placeholder="{{ __('Last Name') }}">
+                @else
+                    <span class="profile-row-value">{{ $candidate?->last_name ?? '—' }}</span>
+                @endif
             </div>
+            @error('lastName') <div class="profile-row-error">{{ $message }}</div> @enderror
+
             <div class="profile-row">
                 <span class="profile-row-label">{{ __('admin.phone') }}</span>
-                <span class="profile-row-value">{{ $candidate?->phone ?? '—' }}</span>
+                @if($editingPersonal)
+                    <input type="tel" wire:model="phone" class="profile-row-input"
+                           placeholder="{{ __('admin.phone') }}">
+                @else
+                    <span class="profile-row-value">{{ $candidate?->phone ?? '—' }}</span>
+                @endif
             </div>
+            @error('phone') <div class="profile-row-error">{{ $message }}</div> @enderror
+
             <div class="profile-row">
                 <span class="profile-row-label">{{ __('temoignage.birth_date') }}</span>
-                <span class="profile-row-value">{{ $candidate?->birth_date?->format('d/m/Y') ?? '—' }}</span>
+                @if($editingPersonal)
+                    <input type="date" wire:model="birthDate" class="profile-row-input">
+                @else
+                    <span class="profile-row-value">{{ $candidate?->birth_date?->format('d/m/Y') ?? '—' }}</span>
+                @endif
             </div>
+            @error('birthDate') <div class="profile-row-error">{{ $message }}</div> @enderror
+
             <div class="profile-row">
                 <span class="profile-row-label">{{ __('temoignage.address') }}</span>
-                <span class="profile-row-value">{{ $candidate?->address ?? '—' }}</span>
+                @if($editingPersonal)
+                    <input type="text" wire:model="address" class="profile-row-input"
+                           placeholder="{{ __('temoignage.address') }}">
+                @else
+                    <span class="profile-row-value">{{ $candidate?->address ?? '—' }}</span>
+                @endif
             </div>
-            <div class="profile-row">
-                <span class="profile-row-label">CV</span>
-                <span class="profile-row-value">
-                    @if($candidate?->cv_path)
-                        <a href="{{ asset('storage/' . $candidate->cv_path) }}" target="_blank"
-                           style="color:#1a1a8c;font-weight:600;">✅ {{ __('View') }}</a>
-                    @else
-                        ❌ {{ __('Non uploadé') }}
-                    @endif
-                </span>
-            </div>
+            @error('address') <div class="profile-row-error">{{ $message }}</div> @enderror
         </div>
 
+        {{-- Account --}}
         <div class="profile-section">
-            <div class="profile-section-title">🔐 {{ __('Account') }}</div>
+            <div class="profile-section-header">
+                <div class="profile-section-title">🔐 {{ __('Account') }}</div>
+                @cannot('view-candidate-scores')
+                    @if($editingAccount)
+                        <div class="profile-section-actions">
+                            <button type="button" wire:click="saveAccount" class="profile-section-edit save">
+                                💾 <span>{{ __('Save') }}</span>
+                            </button>
+                            <button type="button" wire:click="cancelAccount" class="profile-section-edit cancel">
+                                ✕ <span>{{ __('Cancel') }}</span>
+                            </button>
+                        </div>
+                    @else
+                        <button type="button" wire:click="editAccount" class="profile-section-edit"
+                                title="{{ __('Edit') }}" aria-label="{{ __('Edit') }}">
+                            ✏️ <span>{{ __('Edit') }}</span>
+                        </button>
+                    @endif
+                @endcannot
+            </div>
+
             <div class="profile-row">
                 <span class="profile-row-label">{{ __('Username') }}</span>
-                <span class="profile-row-value">{{ $user->name }}</span>
+                @if($editingAccount)
+                    <input type="text" wire:model="userName" class="profile-row-input">
+                @else
+                    <span class="profile-row-value">{{ $user->name }}</span>
+                @endif
             </div>
+            @error('userName') <div class="profile-row-error">{{ $message }}</div> @enderror
+
             <div class="profile-row">
                 <span class="profile-row-label">{{ __('Email') }}</span>
-                <span class="profile-row-value">{{ $user->email }}</span>
+                @if($editingAccount)
+                    <input type="email" wire:model="userEmail" class="profile-row-input">
+                @else
+                    <span class="profile-row-value">{{ $user->email }}</span>
+                @endif
             </div>
+            @error('userEmail') <div class="profile-row-error">{{ $message }}</div> @enderror
+
             <div class="profile-row">
                 <span class="profile-row-label">{{ __('Date') }}</span>
                 <span class="profile-row-value">{{ $user->created_at->format('d/m/Y') }}</span>
             </div>
         </div>
+    </div>
+
+    {{-- CV Card --}}
+    <div class="profile-section profile-cv-section">
+        <div class="profile-section-header">
+            <div class="profile-section-title">📄 CV</div>
+            <div class="profile-section-actions">
+                @if($candidate?->cv_path)
+                    <button type="button" wire:click="toggleCv" class="profile-section-edit"
+                            title="{{ $showCv ? __('Hide CV') : __('Show CV') }}">
+                        @if($showCv)
+                            🙈 <span>{{ __('Hide CV') }}</span>
+                        @else
+                            👁 <span>{{ __('Show CV') }}</span>
+                        @endif
+                    </button>
+                @endif
+            </div>
+        </div>
+
+        <div class="profile-cv-status">
+            @if($candidate?->cv_path)
+                <span class="profile-cv-status-ok">
+                    ✅ {{ __('CV on file') }}
+                </span>
+            @else
+                <span class="profile-cv-status-empty">
+                    ❌ {{ __('No CV uploaded yet.') }}
+                </span>
+            @endif
+        </div>
+
+        @if($showCv && $candidate?->cv_path)
+            <div class="profile-cv-viewer">
+                <iframe src="{{ asset('storage/' . $candidate->cv_path) }}"
+                        title="CV preview"
+                        loading="lazy"></iframe>
+            </div>
+        @endif
+
+        @cannot('view-candidate-scores')
+        <div class="profile-cv-upload">
+            <label class="profile-cv-upload-label" for="newCvInput">
+                <span>📤 {{ __('Replace CV (PDF, max 5 MB)') }}</span>
+            </label>
+            <div class="profile-cv-upload-row">
+                <input id="newCvInput" type="file" wire:model="newCv" accept="application/pdf"
+                       class="profile-cv-input">
+                <button type="button" wire:click="uploadCv"
+                        class="profile-section-edit save"
+                        wire:loading.attr="disabled" wire:target="newCv,uploadCv"
+                        @disabled(! $newCv)>
+                    <span wire:loading.remove wire:target="uploadCv">⬆ {{ __('Upload') }}</span>
+                    <span wire:loading wire:target="uploadCv">… {{ __('Uploading') }}</span>
+                </button>
+                @if($candidate?->cv_path)
+                    <button type="button" wire:click="deleteCv"
+                            class="profile-section-edit cancel"
+                            onclick="return confirm('{{ __('Remove the current CV?') }}')">
+                        🗑 <span>{{ __('Remove') }}</span>
+                    </button>
+                @endif
+            </div>
+            @error('newCv') <div class="profile-row-error">{{ $message }}</div> @enderror
+        </div>
+        @endcannot
     </div>
 
     @if($isAdminViewing && ($primaryScore !== null || $secondaryScore !== null))
@@ -113,10 +255,4 @@
         </div>
     </div>
     @endcan
-
-    @cannot('view-candidate-scores')
-    <a href="/candidate/account-settings" class="profile-edit-btn">
-        ✏️ {{ __('Modifier mon profil') }}
-    </a>
-    @endcannot
 </x-filament-panels::page>

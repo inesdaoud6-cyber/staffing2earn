@@ -4,6 +4,9 @@ namespace App\Filament\Candidate\Pages;
 
 use App\Models\Candidate;
 use App\Services\CandidateService;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -11,32 +14,39 @@ use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\HtmlString;
 
 class AccountSettings extends Page
 {
     use InteractsWithForms;
 
     protected static bool $shouldRegisterNavigation = false;
-
     protected static string $view = 'filament.candidate.pages.account-settings';
-    protected static ?string $title = 'Paramètres du Compte';
     protected static ?string $slug = 'account-settings';
+
+    public function getTitle(): string
+    {
+        return __('My Profile');
+    }
 
     public ?array $data = [];
 
     public function mount(CandidateService $service): void
     {
-        $user = auth()->user();
+        $user      = auth()->user();
         $candidate = $service->getCandidateByUser($user);
 
         $this->form->fill([
             'first_name'                => $candidate?->first_name ?? '',
             'last_name'                 => $candidate?->last_name ?? '',
             'phone'                     => $candidate?->phone ?? '',
+            'birth_date'                => $candidate?->birth_date ?? null,
+            'address'                   => $candidate?->address ?? '',
+            'cv'                        => $candidate?->cv_path,
             'name'                      => $user->name,
             'email'                     => $user->email,
-            'current_password'         => '',
-            'new_password'             => '',
+            'current_password'          => '',
+            'new_password'              => '',
             'new_password_confirmation' => '',
         ]);
     }
@@ -44,56 +54,82 @@ class AccountSettings extends Page
     public function form(Form $form): Form
     {
         return $form->schema([
-            Section::make('Informations personnelles')
+            Section::make(__('Personal Information'))
                 ->schema([
                     TextInput::make('first_name')
-                        ->label('Prénom')
+                        ->label(__('First Name'))
                         ->required(),
-
                     TextInput::make('last_name')
-                        ->label('Nom')
+                        ->label(__('Last Name'))
                         ->required(),
-
                     TextInput::make('phone')
                         ->label(__('admin.phone'))
                         ->tel(),
+                    DatePicker::make('birth_date')
+                        ->label(__('temoignage.birth_date')),
+                    TextInput::make('address')
+                        ->label(__('temoignage.address'))
+                        ->columnSpanFull(),
                 ])
                 ->columns(2),
 
-            Section::make('Compte')
+            Section::make(__('Your CV'))
+                ->description(__('Your default CV used for new applications. You can still override it per application from the upload-CV step.'))
+                ->schema([
+                    Placeholder::make('current_cv_link')
+                        ->label(__('Current CV'))
+                        ->content(function () {
+                            $candidate = Candidate::where('user_id', auth()->id())->first();
+
+                            return $candidate?->cv_path
+                                ? new HtmlString(
+                                    '<a href="' . e(asset('storage/' . $candidate->cv_path)) . '" target="_blank" '
+                                    . 'style="color:#1a1a8c;font-weight:600;text-decoration:underline;">'
+                                    . '📄 ' . e(basename($candidate->cv_path)) . '</a>'
+                                )
+                                : __('No CV uploaded yet.');
+                        }),
+
+                    FileUpload::make('cv')
+                        ->label(__('Replace CV (PDF)'))
+                        ->acceptedFileTypes(['application/pdf'])
+                        ->maxSize(5120)
+                        ->disk('public')
+                        ->directory('cvs')
+                        ->helperText(__('Leave empty to keep the current CV.')),
+                ]),
+
+            Section::make(__('Account'))
                 ->schema([
                     TextInput::make('name')
-                        ->label("Nom d'utilisateur")
+                        ->label(__('Username'))
                         ->required(),
-
                     TextInput::make('email')
-                        ->label('Email')
+                        ->label(__('Email'))
                         ->email()
                         ->required(),
                 ])
                 ->columns(2),
 
-            Section::make('Sécurité')
+            Section::make(__('Security'))
                 ->schema([
                     TextInput::make('current_password')
-                        ->label('Mot de passe actuel')
+                        ->label(__('Current password'))
                         ->password()
                         ->dehydrated(false),
-
                     TextInput::make('new_password')
-                        ->label('Nouveau mot de passe')
+                        ->label(__('New password'))
                         ->password()
                         ->minLength(8)
                         ->dehydrated(false),
-
                     TextInput::make('new_password_confirmation')
-                        ->label('Confirmation')
+                        ->label(__('Confirm new password'))
                         ->password()
                         ->dehydrated(false),
                 ])
                 ->columns(1),
         ])
-        ->statePath('data');
+            ->statePath('data');
     }
 
     public function save(CandidateService $service): void
@@ -101,33 +137,31 @@ class AccountSettings extends Page
         $data = $this->form->getState();
         $user = auth()->user();
 
-        $candidate = $service->getCandidateByUser($user);
+        $candidate = $service->getCandidateByUser($user)
+            ?? Candidate::firstOrNew(['user_id' => $user->id]);
 
-        // Update profile
-        if ($candidate) {
-            $service->updateProfile($user, $candidate, $data);
-        } else {
-            Candidate::updateOrCreate(
-                ['user_id' => $user->id],
-                [
-                    'first_name' => $data['first_name'],
-                    'last_name'  => $data['last_name'],
-                    'phone'      => $data['phone'],
-                ]
-            );
+        $candidate->user_id    = $user->id;
+        $candidate->first_name = $data['first_name'];
+        $candidate->last_name  = $data['last_name'];
+        $candidate->phone      = $data['phone']      ?? null;
+        $candidate->birth_date = $data['birth_date'] ?? null;
+        $candidate->address    = $data['address']    ?? null;
 
-            $user->update([
-                'name'  => $data['name'],
-                'email' => $data['email'],
-            ]);
+        if (! empty($data['cv'])) {
+            $candidate->cv_path = $data['cv'];
         }
 
-        // Password update (sécurisé)
-        if (!empty($data['new_password'])) {
+        $candidate->save();
 
-            if (!Hash::check($data['current_password'] ?? '', $user->password)) {
+        $user->update([
+            'name'  => $data['name'] ?: trim($data['first_name'] . ' ' . $data['last_name']),
+            'email' => $data['email'],
+        ]);
+
+        if (! empty($data['new_password'])) {
+            if (! Hash::check($data['current_password'] ?? '', $user->password)) {
                 Notification::make()
-                    ->title('Mot de passe actuel incorrect')
+                    ->title(__('Current password is incorrect'))
                     ->danger()
                     ->send();
 
@@ -136,7 +170,7 @@ class AccountSettings extends Page
 
             if ($data['new_password'] !== $data['new_password_confirmation']) {
                 Notification::make()
-                    ->title('La confirmation du mot de passe ne correspond pas')
+                    ->title(__('Password confirmation does not match'))
                     ->danger()
                     ->send();
 
@@ -149,7 +183,7 @@ class AccountSettings extends Page
         $this->mount($service);
 
         Notification::make()
-            ->title('Modifications enregistrées !')
+            ->title(__('Profile updated.'))
             ->success()
             ->send();
     }

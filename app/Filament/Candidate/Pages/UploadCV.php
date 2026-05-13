@@ -6,12 +6,16 @@ use App\Models\ApplicationProgress;
 use App\Models\Candidate;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Illuminate\Support\HtmlString;
 
 class UploadCV extends Page
 {
@@ -28,10 +32,15 @@ class UploadCV extends Page
     }
 
     public ?array $data = [];
+    public bool $hasProfileCv = false;
+    public ?string $profileCvPath = null;
 
     public function mount(): void
     {
         $candidate = Candidate::where('user_id', auth()->id())->first();
+
+        $this->hasProfileCv  = (bool) $candidate?->cv_path;
+        $this->profileCvPath = $candidate?->cv_path;
 
         $this->form->fill([
             'first_name' => $candidate?->first_name ?? '',
@@ -39,11 +48,15 @@ class UploadCV extends Page
             'phone'      => $candidate?->phone ?? '',
             'address'    => $candidate?->address ?? '',
             'birth_date' => $candidate?->birth_date ?? null,
+            'cv_choice'  => $this->hasProfileCv ? 'profile' : 'new',
         ]);
     }
 
     public function form(Form $form): Form
     {
+        $hasProfileCv  = $this->hasProfileCv;
+        $profileCvPath = $this->profileCvPath;
+
         return $form
             ->schema([
                 Section::make(__('Personal Information'))
@@ -74,13 +87,42 @@ class UploadCV extends Page
                 Section::make(__('Your CV'))
                     ->description(__('temoignage.cv_desc'))
                     ->schema([
+                        Radio::make('cv_choice')
+                            ->label(__('Which CV do you want to use?'))
+                            ->options([
+                                'profile' => __('Use the CV from my profile'),
+                                'new'     => __('Upload a new CV for this application'),
+                            ])
+                            ->descriptions([
+                                'profile' => $profileCvPath
+                                    ? __('Currently on file:') . ' ' . basename($profileCvPath)
+                                    : '',
+                                'new' => __('The uploaded file will also become your profile CV.'),
+                            ])
+                            ->required()
+                            ->live()
+                            ->visible($hasProfileCv)
+                            ->default($hasProfileCv ? 'profile' : 'new'),
+
+                        Placeholder::make('current_cv_link')
+                            ->label(__('Current profile CV'))
+                            ->content(fn () => $profileCvPath
+                                ? new HtmlString(
+                                    '<a href="' . e(asset('storage/' . $profileCvPath)) . '" target="_blank" '
+                                    . 'style="color:#1a1a8c;font-weight:600;text-decoration:underline;">'
+                                    . '📄 ' . e(basename($profileCvPath)) . '</a>'
+                                )
+                                : '—')
+                            ->visible(fn (Get $get) => $hasProfileCv && $get('cv_choice') === 'profile'),
+
                         FileUpload::make('cv')
                             ->label(__('Upload your CV') . ' (PDF)')
                             ->acceptedFileTypes(['application/pdf'])
                             ->maxSize(5120)
                             ->disk('public')
                             ->directory('cvs')
-                            ->required(),
+                            ->required(fn (Get $get) => ! $hasProfileCv || $get('cv_choice') === 'new')
+                            ->visible(fn (Get $get) => ! $hasProfileCv || $get('cv_choice') === 'new'),
                     ]),
             ])
             ->statePath('data');
@@ -89,18 +131,35 @@ class UploadCV extends Page
     public function submit(): void
     {
         $data = $this->form->getState();
+        $user = auth()->user();
 
-        Candidate::updateOrCreate(
-            ['user_id' => auth()->id()],
-            [
-                'cv_path'    => $data['cv'],
-                'first_name' => $data['first_name'],
-                'last_name'  => $data['last_name'],
-                'phone'      => $data['phone'],
-                'birth_date' => $data['birth_date'] ?? null,
-                'address'    => $data['address'] ?? null,
-            ]
-        );
+        $candidate = Candidate::firstOrNew(['user_id' => $user->id]);
+        $candidate->first_name = $data['first_name'];
+        $candidate->last_name  = $data['last_name'];
+        $candidate->phone      = $data['phone'];
+        $candidate->birth_date = $data['birth_date'] ?? null;
+        $candidate->address    = $data['address']    ?? null;
+
+        $choice    = $data['cv_choice'] ?? 'new';
+        $newUpload = $data['cv'] ?? null;
+
+        if ($choice === 'new' && $newUpload) {
+            $candidate->cv_path = $newUpload;
+            $cvForApplication   = $newUpload;
+        } else {
+            $cvForApplication = $candidate->cv_path;
+        }
+
+        $candidate->save();
+
+        $latestApp = ApplicationProgress::where('candidate_id', $candidate->id)
+            ->whereNull('cv_path')
+            ->latest()
+            ->first();
+
+        if ($latestApp) {
+            $latestApp->update(['cv_path' => $cvForApplication]);
+        }
 
         Notification::make()
             ->title(__('temoignage.cv_saved'))

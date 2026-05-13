@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Filesystem\WindowsFilesystem;
 use App\Http\Responses\LogoutResponse;
 use Filament\Http\Responses\Auth\Contracts\LogoutResponse as LogoutResponseContract;
 use Illuminate\Support\Facades\Gate;
@@ -13,6 +14,10 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(LogoutResponseContract::class, LogoutResponse::class);
+
+        if (PHP_OS_FAMILY === 'Windows') {
+            $this->app->singleton('files', fn () => new WindowsFilesystem);
+        }
     }
 
     public function boot(): void

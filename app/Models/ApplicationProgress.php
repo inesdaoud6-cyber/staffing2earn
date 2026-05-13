@@ -14,6 +14,7 @@ class ApplicationProgress extends Model
         'candidate_id',
         'offre_id',
         'test_id',
+        'cv_path',
         'status',
         'current_level',
         'level_status',

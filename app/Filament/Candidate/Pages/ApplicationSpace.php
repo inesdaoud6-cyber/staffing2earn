@@ -8,10 +8,20 @@ use Filament\Pages\Page;
 
 class ApplicationSpace extends Page
 {
-    protected static bool $shouldRegisterNavigation = false;
+    protected static ?string $navigationIcon = 'heroicon-o-briefcase';
     protected static string $view = 'filament.candidate.pages.application-space';
-    protected static ?string $title = 'Mes Candidatures';
     protected static ?string $slug = 'applications';
+    protected static ?int $navigationSort = 3;
+
+    public static function getNavigationLabel(): string
+    {
+        return __('My Applications');
+    }
+
+    public function getTitle(): string
+    {
+        return __('My Applications');
+    }
 
     public string $candidateName = '';
     public int $totalApplications = 0;
