@@ -21,7 +21,7 @@ class CandidateResource extends Resource
 
     public static function getNavigationLabel(): string
     {
-        return __('nav.candidates');
+        return __('nav.candidates_management');
     }
 
     public static function getModelLabel(): string

@@ -17,7 +17,8 @@ class ChoixCandidature extends Page
     protected static string $view = 'filament.candidate.pages.choix-candidature';
     protected static ?string $title = 'Choisir ma Candidature';
     protected static ?string $slug = 'choix-candidature';
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 1;
+    protected static ?string $navigationGroup = 'candidate.applications';
 
     public $offres;
     public string $search = '';

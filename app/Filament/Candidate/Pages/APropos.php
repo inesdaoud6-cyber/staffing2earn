@@ -14,7 +14,8 @@ class APropos extends Page
     protected static string $view = 'filament.candidate.pages.a-propos';
     protected static ?string $title = 'À Propos';
     protected static ?string $slug = 'a-propos';
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 3;
+    protected static ?string $navigationGroup = 'candidate.workspace';
 
     public $temoignages;
     public bool $hasApplied = false;

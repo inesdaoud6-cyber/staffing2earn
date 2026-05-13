@@ -14,6 +14,7 @@ class Dashboard extends Page
     protected static ?string $title = 'Mon Espace';
     protected static ?string $slug = 'dashboard';
     protected static ?int $navigationSort = 1;
+    protected static ?string $navigationGroup = 'candidate.workspace';
 
     public string $userName = '';
     public bool $isAdminViewing = false;

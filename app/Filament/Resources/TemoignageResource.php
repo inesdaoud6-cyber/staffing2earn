@@ -19,7 +19,7 @@ class TemoignageResource extends Resource
 
     public static function getNavigationLabel(): string
     {
-        return __('nav.testimonials');
+        return __('nav.testimonials_management');
     }
 
     public static function getModelLabel(): string

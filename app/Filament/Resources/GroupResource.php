@@ -20,7 +20,7 @@ class GroupResource extends Resource
 
     public static function getNavigationLabel(): string
     {
-        return __('admin.groups');
+        return __('nav.groups_management');
     }
 
     public static function getModelLabel(): string

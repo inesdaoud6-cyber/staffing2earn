@@ -14,8 +14,12 @@ class BlockResource extends Resource
 {
     protected static ?string $model = Block::class;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
-    protected static ?string $navigationLabel = 'Blocks';
     protected static ?string $navigationGroup = 'Configuration';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('nav.blocks_management');
+    }
 
     public static function form(Form $form): Form
     {

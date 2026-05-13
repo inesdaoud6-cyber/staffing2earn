@@ -20,7 +20,7 @@ class TestResource extends Resource
     protected static ?string $navigationGroup = 'Évaluations';
     protected static ?int $navigationSort = 1;
 
-    public static function getNavigationLabel(): string { return 'Tests'; }
+    public static function getNavigationLabel(): string { return __('nav.tests_management'); }
     public static function getModelLabel(): string { return 'Test'; }
     public static function getPluralModelLabel(): string { return 'Tests'; }
 

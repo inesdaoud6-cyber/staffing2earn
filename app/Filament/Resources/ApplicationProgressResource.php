@@ -36,7 +36,7 @@ class ApplicationProgressResource extends Resource
 
     public static function getNavigationLabel(): string
     {
-        return __('admin.applications');
+        return __('nav.applications_management');
     }
 
     public static function getModelLabel(): string

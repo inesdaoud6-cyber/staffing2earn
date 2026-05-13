@@ -7,9 +7,11 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Navigation\MenuItem;
+use Filament\Navigation\NavigationGroup;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -25,17 +27,38 @@ class CandidatePanelProvider extends PanelProvider
         return $panel
             ->id('candidate')
             ->path('candidate')
-            ->colors(['primary' => Color::Purple])
+            ->colors(['primary' => Color::Violet])
             ->loginRouteSlug('login')
             ->brandName('Staffing2Earn')
             ->brandLogo(asset('images/2earn.png'))
             ->brandLogoHeight('2.5rem')
             ->favicon(asset('images/2earn.png'))
+            ->sidebarCollapsibleOnDesktop()
             ->homeUrl(fn () => route('filament.candidate.pages.dashboard'))
             ->renderHook(
                 'panels::topbar.end',
                 fn () => view('partials.topbar-actions')
             )
+            ->renderHook(
+                PanelsRenderHook::HEAD_END,
+                fn () => view('filament.hooks.shell-styles')
+            )
+            ->renderHook(
+                PanelsRenderHook::SIDEBAR_FOOTER,
+                fn () => view('filament.partials.sidebar-user-card')
+            )
+            ->navigationGroups([
+                NavigationGroup::make('candidate.workspace')
+                    ->label(fn () => __('nav.workspace_management'))
+                    ->icon('heroicon-o-home'),
+                NavigationGroup::make('candidate.applications')
+                    ->label(fn () => __('nav.applications_management'))
+                    ->icon('heroicon-o-briefcase'),
+                NavigationGroup::make('candidate.account')
+                    ->label(fn () => __('nav.account_management'))
+                    ->icon('heroicon-o-user-circle')
+                    ->collapsed(),
+            ])
             ->userMenuItems([
                 MenuItem::make()
                     ->label(fn () => __('Mon Profil'))

@@ -24,7 +24,7 @@ class QuestionResource extends Resource
 
     public static function getNavigationLabel(): string
     {
-        return __('Questions');
+        return __('nav.questions_management');
     }
 
     public static function getModelLabel(): string

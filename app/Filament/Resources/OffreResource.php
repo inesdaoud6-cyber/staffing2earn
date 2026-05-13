@@ -23,7 +23,7 @@ class OffreResource extends Resource
 
     public static function getNavigationLabel(): string
     {
-        return __('nav.job_offers');
+        return __('nav.job_offers_management');
     }
 
     public static function getModelLabel(): string

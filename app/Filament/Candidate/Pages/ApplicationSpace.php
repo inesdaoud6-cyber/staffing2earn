@@ -12,7 +12,8 @@ class ApplicationSpace extends Page
     protected static ?string $navigationIcon = 'heroicon-o-briefcase';
     protected static string $view = 'filament.candidate.pages.application-space';
     protected static ?string $slug = 'applications';
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 2;
+    protected static ?string $navigationGroup = 'candidate.applications';
 
     public static function getNavigationLabel(): string
     {

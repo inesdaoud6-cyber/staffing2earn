@@ -21,7 +21,7 @@ class AdminNotifications extends Page
 
     public static function getNavigationLabel(): string
     {
-        return __('admin.notifications_inbox');
+        return __('nav.notifications_management');
     }
 
     public function getTitle(): string

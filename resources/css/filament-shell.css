@@ -1,0 +1,404 @@
+/* =========================================================
+   Staffing2Earn — Filament shell (sidebar + topbar refresh)
+   Shared across the admin and candidate panels.
+   Goals: premium violet + sleek compact layout.
+   ========================================================= */
+
+:root {
+    --s2e-violet-50:  #f5f3ff;
+    --s2e-violet-100: #ede9fe;
+    --s2e-violet-200: #ddd6fe;
+    --s2e-violet-300: #c4b5fd;
+    --s2e-violet-400: #a78bfa;
+    --s2e-violet-500: #8b5cf6;
+    --s2e-violet-600: #7c3aed;
+    --s2e-violet-700: #6d28d9;
+    --s2e-violet-800: #5b21b6;
+    --s2e-violet-900: #4c1d95;
+    --s2e-sidebar-bg-from: #ffffff;
+    --s2e-sidebar-bg-to:   #faf7ff;
+}
+
+.dark {
+    --s2e-sidebar-bg-from: #0b0b15;
+    --s2e-sidebar-bg-to:   #14102a;
+}
+
+/* ---------- Sidebar shell ---------- */
+.fi-sidebar {
+    border-inline-end: 1px solid rgba(139, 92, 246, 0.08);
+    background:
+        linear-gradient(180deg,
+            var(--s2e-sidebar-bg-from) 0%,
+            var(--s2e-sidebar-bg-to)   100%);
+}
+
+.dark .fi-sidebar {
+    border-inline-end-color: rgba(139, 92, 246, 0.18);
+}
+
+/* Sidebar header (brand row) */
+.fi-sidebar .fi-sidebar-header {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding-inline: 1.25rem;
+}
+
+.fi-sidebar .fi-sidebar-header img,
+.fi-sidebar .fi-logo img {
+    filter: drop-shadow(0 4px 10px rgba(124, 58, 237, 0.22));
+}
+
+/* Nav scroll area: slim custom scrollbar */
+.fi-sidebar-nav {
+    padding-block: 1.25rem !important;
+    padding-inline: 0.875rem !important;
+    gap: 1.25rem !important;
+}
+
+.fi-sidebar-nav::-webkit-scrollbar { width: 6px; }
+.fi-sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+.fi-sidebar-nav::-webkit-scrollbar-thumb {
+    background: rgba(139, 92, 246, 0.25);
+    border-radius: 999px;
+}
+.fi-sidebar-nav::-webkit-scrollbar-thumb:hover {
+    background: rgba(139, 92, 246, 0.45);
+}
+.fi-sidebar-nav { scrollbar-color: rgba(139, 92, 246, 0.30) transparent; scrollbar-width: thin; }
+
+/* ---------- Group headers ---------- */
+.fi-sidebar-group-label {
+    font-size: 0.68rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--s2e-violet-700) !important;
+    padding-inline: 0.75rem !important;
+    padding-block: 0.25rem !important;
+    opacity: 0.85;
+}
+
+.dark .fi-sidebar-group-label {
+    color: var(--s2e-violet-300) !important;
+}
+
+.fi-sidebar-group + .fi-sidebar-group {
+    padding-top: 0.5rem;
+    border-top: 1px dashed rgba(139, 92, 246, 0.12);
+}
+
+.dark .fi-sidebar-group + .fi-sidebar-group {
+    border-top-color: rgba(139, 92, 246, 0.20);
+}
+
+/* ---------- Nav items ---------- */
+.fi-sidebar-item-button {
+    border-radius: 0.625rem !important;
+    padding-block: 0.55rem !important;
+    padding-inline: 0.75rem !important;
+    margin-block: 0.1rem;
+    font-weight: 500 !important;
+    color: rgb(55, 65, 81) !important;
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease,
+        box-shadow 0.15s ease,
+        transform 0.15s ease !important;
+}
+
+.dark .fi-sidebar-item-button {
+    color: rgb(209, 213, 219) !important;
+}
+
+.fi-sidebar-item-button:hover {
+    background: rgba(139, 92, 246, 0.08) !important;
+    transform: translateX(2px);
+}
+
+.fi-sidebar-item-button:hover .fi-sidebar-item-label {
+    color: var(--s2e-violet-800) !important;
+}
+
+.dark .fi-sidebar-item-button:hover .fi-sidebar-item-label {
+    color: var(--s2e-violet-200) !important;
+}
+
+[dir="rtl"] .fi-sidebar-item-button:hover {
+    transform: translateX(-2px);
+}
+
+.dark .fi-sidebar-item-button:hover {
+    color: var(--s2e-violet-200) !important;
+    background: linear-gradient(
+        90deg,
+        rgba(139, 92, 246, 0.20) 0%,
+        rgba(139, 92, 246, 0.06) 100%
+    ) !important;
+}
+
+.fi-sidebar-item-button .fi-sidebar-item-icon {
+    color: rgb(107, 114, 128) !important;
+    transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.fi-sidebar-item-button:hover .fi-sidebar-item-icon {
+    color: var(--s2e-violet-700) !important;
+}
+
+.dark .fi-sidebar-item-button:hover .fi-sidebar-item-icon {
+    color: var(--s2e-violet-300) !important;
+}
+
+/* Active item — light violet pill with strong contrast (no dark shadow on text) */
+.fi-sidebar-item.fi-active .fi-sidebar-item-button,
+.fi-sidebar-item-active .fi-sidebar-item-button,
+.fi-sidebar-item-button[aria-current="page"] {
+    background: linear-gradient(
+        100deg,
+        rgba(139, 92, 246, 0.18) 0%,
+        rgba(167, 139, 250, 0.10) 100%
+    ) !important;
+    color: var(--s2e-violet-800) !important;
+    box-shadow: inset 3px 0 0 0 var(--s2e-violet-600);
+    transform: none;
+}
+
+.dark .fi-sidebar-item.fi-active .fi-sidebar-item-button,
+.dark .fi-sidebar-item-active .fi-sidebar-item-button,
+.dark .fi-sidebar-item-button[aria-current="page"] {
+    background: linear-gradient(
+        100deg,
+        rgba(139, 92, 246, 0.25) 0%,
+        rgba(167, 139, 250, 0.10) 100%
+    ) !important;
+    color: var(--s2e-violet-100) !important;
+    box-shadow: inset 3px 0 0 0 var(--s2e-violet-400);
+}
+
+[dir="rtl"] .fi-sidebar-item.fi-active .fi-sidebar-item-button,
+[dir="rtl"] .fi-sidebar-item-active .fi-sidebar-item-button,
+[dir="rtl"] .fi-sidebar-item-button[aria-current="page"] {
+    box-shadow: inset -3px 0 0 0 var(--s2e-violet-600);
+}
+
+[dir="rtl"] .dark .fi-sidebar-item.fi-active .fi-sidebar-item-button,
+[dir="rtl"] .dark .fi-sidebar-item-active .fi-sidebar-item-button,
+[dir="rtl"] .dark .fi-sidebar-item-button[aria-current="page"] {
+    box-shadow: inset -3px 0 0 0 var(--s2e-violet-400);
+}
+
+/* Ensure inner label + icon are readable on the active state */
+.fi-sidebar-item.fi-active .fi-sidebar-item-label,
+.fi-sidebar-item-active .fi-sidebar-item-label,
+.fi-sidebar-item-button[aria-current="page"] .fi-sidebar-item-label {
+    color: var(--s2e-violet-800) !important;
+    font-weight: 700 !important;
+}
+
+.dark .fi-sidebar-item.fi-active .fi-sidebar-item-label,
+.dark .fi-sidebar-item-active .fi-sidebar-item-label,
+.dark .fi-sidebar-item-button[aria-current="page"] .fi-sidebar-item-label {
+    color: var(--s2e-violet-100) !important;
+}
+
+.fi-sidebar-item.fi-active .fi-sidebar-item-icon,
+.fi-sidebar-item-active .fi-sidebar-item-icon,
+.fi-sidebar-item-button[aria-current="page"] .fi-sidebar-item-icon {
+    color: var(--s2e-violet-700) !important;
+}
+
+.dark .fi-sidebar-item.fi-active .fi-sidebar-item-icon,
+.dark .fi-sidebar-item-active .fi-sidebar-item-icon,
+.dark .fi-sidebar-item-button[aria-current="page"] .fi-sidebar-item-icon {
+    color: var(--s2e-violet-300) !important;
+}
+
+/* Group collapse chevron */
+.fi-sidebar-group-collapse-button { color: var(--s2e-violet-600) !important; }
+.dark .fi-sidebar-group-collapse-button { color: var(--s2e-violet-300) !important; }
+
+/* ---------- Sidebar footer (user card slot) ---------- */
+.s2e-sidebar-footer {
+    padding: 0.875rem 1rem 1rem;
+    border-top: 1px solid rgba(139, 92, 246, 0.10);
+    background: linear-gradient(
+        180deg,
+        transparent 0%,
+        rgba(139, 92, 246, 0.04) 100%
+    );
+}
+
+.dark .s2e-sidebar-footer {
+    border-top-color: rgba(139, 92, 246, 0.18);
+    background: linear-gradient(
+        180deg,
+        transparent 0%,
+        rgba(124, 58, 237, 0.10) 100%
+    );
+}
+
+.s2e-user-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(139, 92, 246, 0.18);
+    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    text-decoration: none;
+    color: inherit;
+}
+
+.dark .s2e-user-card {
+    background: rgba(30, 27, 75, 0.45);
+    border-color: rgba(139, 92, 246, 0.28);
+}
+
+.s2e-user-card:hover {
+    background: rgba(237, 233, 254, 0.85);
+    border-color: rgba(139, 92, 246, 0.35);
+    box-shadow: 0 6px 18px -8px rgba(124, 58, 237, 0.35);
+}
+
+.dark .s2e-user-card:hover {
+    background: rgba(76, 29, 149, 0.40);
+}
+
+.s2e-user-card__avatar {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: #fff;
+    background: linear-gradient(135deg, var(--s2e-violet-600), var(--s2e-violet-400));
+    box-shadow: 0 4px 12px -4px rgba(124, 58, 237, 0.55);
+    overflow: hidden;
+}
+
+.s2e-user-card__avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.s2e-user-card__body {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+}
+
+.s2e-user-card__name {
+    font-weight: 700;
+    font-size: 0.86rem;
+    color: rgb(17, 24, 39);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 12rem;
+}
+
+.dark .s2e-user-card__name {
+    color: rgb(243, 244, 246);
+}
+
+.s2e-user-card__role {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-top: 0.2rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--s2e-violet-700);
+}
+
+.dark .s2e-user-card__role {
+    color: var(--s2e-violet-300);
+}
+
+.s2e-user-card__role-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: currentColor;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+
+.s2e-user-card__chevron {
+    margin-inline-start: auto;
+    color: var(--s2e-violet-500);
+    opacity: 0.65;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.s2e-user-card:hover .s2e-user-card__chevron {
+    opacity: 1;
+    transform: translateX(2px);
+}
+
+[dir="rtl"] .s2e-user-card:hover .s2e-user-card__chevron {
+    transform: translateX(-2px) scaleX(-1);
+}
+
+/* Hide footer text when the sidebar is collapsed (desktop) */
+.fi-sidebar:not(.fi-sidebar-open) .s2e-sidebar-footer .s2e-user-card__body,
+.fi-sidebar:not(.fi-sidebar-open) .s2e-sidebar-footer .s2e-user-card__chevron {
+    display: none;
+}
+
+.fi-sidebar:not(.fi-sidebar-open) .s2e-sidebar-footer {
+    padding-inline: 0.5rem;
+}
+
+.fi-sidebar:not(.fi-sidebar-open) .s2e-user-card {
+    justify-content: center;
+    padding: 0.5rem;
+}
+
+/* ---------- Topbar polish ---------- */
+.fi-topbar > nav {
+    background:
+        linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.96) 0%,
+            rgba(250, 247, 255, 0.96) 100%
+        ) !important;
+    backdrop-filter: saturate(140%) blur(6px);
+    border-bottom: 1px solid rgba(139, 92, 246, 0.10);
+}
+
+.dark .fi-topbar > nav {
+    background:
+        linear-gradient(
+            90deg,
+            rgba(11, 11, 21, 0.85) 0%,
+            rgba(20, 16, 42, 0.85) 100%
+        ) !important;
+    border-bottom-color: rgba(139, 92, 246, 0.22);
+}
+
+/* Soft outline buttons in topbar (lang switcher + bell) */
+.topbar-actions .nb-trigger,
+.topbar-actions .lang-switcher a {
+    border-color: rgba(139, 92, 246, 0.22) !important;
+}
+
+.topbar-actions .nb-trigger:hover {
+    background: var(--s2e-violet-50);
+    color: var(--s2e-violet-700);
+    border-color: var(--s2e-violet-300) !important;
+}
+
+/* ---------- Misc: keep page content breathing ---------- */
+.fi-main { padding-top: 1rem; }
