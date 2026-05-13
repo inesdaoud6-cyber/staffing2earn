@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\Filesystem\WindowsFilesystem;
 use App\Http\Responses\LogoutResponse;
+use App\Models\Offre;
+use App\Observers\OffreObserver;
 use Filament\Http\Responses\Auth\Contracts\LogoutResponse as LogoutResponseContract;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -24,6 +26,9 @@ class AppServiceProvider extends ServiceProvider
     {
         Livewire::component('candidate.dashboard-component', \App\Livewire\Candidate\DashboardComponent::class);
         Livewire::component('candidate.take-test-component', \App\Livewire\Candidate\TakeTestComponent::class);
+        Livewire::component('notification-bell', \App\Livewire\NotificationBell::class);
+
+        Offre::observe(OffreObserver::class);
 
         Gate::define('view-translation-manager', fn () => true);
 

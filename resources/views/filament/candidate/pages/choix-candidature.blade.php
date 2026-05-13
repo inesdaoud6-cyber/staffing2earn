@@ -1,6 +1,22 @@
 <x-filament-panels::page>
     @vite('resources/css/candidate-choix.css')
 
+    <script>
+        // When the candidate lands here from a notification (URL hash `#offre-ID`),
+        // scroll the card into view and pulse it so the right offer is obvious.
+        document.addEventListener('DOMContentLoaded', () => {
+            const hash = window.location.hash;
+            if (!hash || !hash.startsWith('#offre-')) return;
+
+            const target = document.querySelector(hash);
+            if (!target) return;
+
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            target.classList.add('offre-card-highlight');
+            setTimeout(() => target.classList.remove('offre-card-highlight'), 2400);
+        });
+    </script>
+
     @can('manage-candidates')
     <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:0.75rem 1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;">
         <span style="color:#92400e;font-weight:600;">🛡️ Vue administrateur</span>
@@ -37,7 +53,7 @@
             @if($offres->count() > 0)
             <div class="offres-list" style="width:100%;">
                 @foreach($offres as $offre)
-                <div class="offre-card">
+                <div class="offre-card" id="offre-{{ $offre->id }}">
                     <div>
                         <div class="offre-title">{{ $offre->title }}</div>
                         <div class="offre-meta">

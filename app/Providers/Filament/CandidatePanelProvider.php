@@ -34,7 +34,7 @@ class CandidatePanelProvider extends PanelProvider
             ->homeUrl(fn () => route('filament.candidate.pages.dashboard'))
             ->renderHook(
                 'panels::topbar.end',
-                fn () => view('partials.lang-switcher-topbar')
+                fn () => view('partials.topbar-actions')
             )
             ->userMenuItems([
                 MenuItem::make()

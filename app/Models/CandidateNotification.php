@@ -35,4 +35,23 @@ class CandidateNotification extends Model
     {
         return $this->belongsTo(Offre::class);
     }
+
+    /**
+     * Where clicking this notification should take the candidate. Falls back
+     * to the notifications page so a bogus type can never produce a dead link.
+     */
+    public function getUrlAttribute(): string
+    {
+        $applicationsRoute  = route('filament.candidate.pages.applications');
+        $offresRoute        = route('filament.candidate.pages.choix-candidature');
+        $notificationsRoute = route('filament.candidate.pages.notifications');
+
+        return match ($this->type) {
+            'offre' => $this->offre_id
+                ? $offresRoute . '#offre-' . $this->offre_id
+                : $offresRoute,
+            'application', 'validated', 'rejected', 'result' => $applicationsRoute,
+            default => $notificationsRoute,
+        };
+    }
 }

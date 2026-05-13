@@ -18,7 +18,7 @@ class MonTemoignage extends Page
     protected static ?string $navigationIcon = 'heroicon-o-chat-bubble-left-ellipsis';
     protected static string $view = 'filament.candidate.pages.mon-temoignage';
     protected static ?string $slug = 'mon-temoignage';
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 6;
 
     public static function getNavigationLabel(): string
     {

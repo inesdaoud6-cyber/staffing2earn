@@ -2,70 +2,240 @@
     @vite('resources/css/candidate-notifications.css')
 
     @can('send-candidate-notification')
-        <div
-            style="background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:0.75rem 1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;">
-            <span style="color:#92400e;font-weight:600;">🛡️ Vue administrateur</span>
-            <a href="/admin"
-                style="background:#f59e0b;color:#fff;padding:0.35rem 0.9rem;border-radius:6px;font-size:0.85rem;text-decoration:none;">←
-                {{ __('Back to admin') }}</a>
+        <div class="notif-admin-banner">
+            <span class="notif-admin-banner-text">
+                @svg('heroicon-o-shield-check', 'notif-inline-icon')
+                {{ __('Admin view') }}
+            </span>
+            <a href="/admin">
+                @svg('heroicon-o-arrow-left', 'notif-inline-icon')
+                {{ __('Back to admin') }}
+            </a>
         </div>
     @endcan
 
-    <div class="notif-header">
-        <div class="notif-header-icon">🔔</div>
-        <div>
-            <h2>{{ __('Mes Notifications') }}</h2>
-            <p>{{ __('Restez informé de l\'avancement de vos candidatures') }}</p>
-        </div>
-    </div>
-
-    <div class="notif-list">
-        @forelse($notifications as $notif)
-            <div class="notif-item {{ !$notif->is_read ? 'unread' : '' }}">
-                <div class="notif-icon {{ $notif->type }}">
-                    @if($notif->type === 'validated') ✅
-                    @elseif($notif->type === 'rejected') ❌
-                    @elseif($notif->type === 'offre') 💼
-                    @else ℹ️
+    <div class="notif-shell">
+        {{-- ── Header ───────────────────────────────────────────── --}}
+        <header class="notif-page-header">
+            <div>
+                <h2>{{ __('My Notifications') }}</h2>
+                <p>
+                    @if($unreadCount > 0)
+                        <strong>{{ $unreadCount }}</strong>
+                        {{ trans_choice('{1} unread notification|[2,*] unread notifications', $unreadCount) }}
+                    @else
+                        {{ __('You are all caught up.') }}
                     @endif
-                </div>
-                <div class="notif-content">
-                    <div class="notif-title">{{ $notif->title }}</div>
-                    <div class="notif-message">{{ $notif->message }}</div>
-                    <div class="notif-time">{{ $notif->created_at->diffForHumans() }}</div>
-                </div>
-                @if(!$notif->is_read)
-                    <div class="notif-unread-dot"></div>
+                </p>
+            </div>
+
+            <div class="notif-page-header-actions">
+                @if($unreadCount > 0)
+                    <button type="button" wire:click="markAllRead" class="notif-btn notif-btn-ghost">
+                        @svg('heroicon-o-check', 'notif-btn-icon')
+                        <span>{{ __('Mark all read') }}</span>
+                    </button>
+                @endif
+                @if($notifications->isNotEmpty())
+                    <button type="button"
+                            wire:click="deleteAll"
+                            onclick="return confirm('{{ __('Delete every notification? This cannot be undone.') }}')"
+                            class="notif-btn notif-btn-ghost notif-btn-danger">
+                        @svg('heroicon-o-trash', 'notif-btn-icon')
+                        <span>{{ __('Delete all') }}</span>
+                    </button>
                 @endif
             </div>
-        @empty
-            <div class="notif-empty">
-                🔕 {{ __('Aucune notification pour le moment.') }}<br>
-                <small>{{ __('Nous vous notifierons dès qu\'il y a du nouveau !') }}</small>
-            </div>
-        @endforelse
-    </div>
+        </header>
 
-    @if($offresNouvelles->count() > 0)
-        <div class="offres-section">
-            <div class="offres-section-title">💼 {{ __('nav.job_offers') }}</div>
-            @foreach($offresNouvelles as $offre)
-                <div class="offre-notif-card">
-                    <div>
-                        <div class="offre-notif-title">{{ $offre->title }}</div>
-                        <div class="offre-notif-meta">
-                            @if($offre->contract_type)
-                                <span class="offre-badge">{{ $offre->contract_type }}</span>
-                            @endif
-                            {{ $offre->domain }}
-                            @if($offre->deadline)
-                                · {{ __('admin.deadline') }} {{ $offre->deadline->format('d/m/Y') }}
+        {{-- ── Toolbar ──────────────────────────────────────────── --}}
+        <div class="notif-toolbar">
+            <div class="notif-filter">
+                @php
+                    $tabs = [
+                        'all'    => __('All'),
+                        'unread' => __('Unread'),
+                        'read'   => __('Read'),
+                    ];
+                @endphp
+                @foreach($tabs as $key => $label)
+                    <button type="button"
+                            wire:click="$set('filter', '{{ $key }}')"
+                            class="notif-tab {{ $filter === $key ? 'is-active' : '' }}">
+                        {{ $label }}
+                        @if($key === 'unread' && $unreadCount > 0)
+                            <span class="notif-tab-count">{{ $unreadCount }}</span>
+                        @endif
+                    </button>
+                @endforeach
+            </div>
+
+            @if(count($selected) > 0)
+                <div class="notif-bulk">
+                    <span class="notif-bulk-info">
+                        {{ count($selected) }} {{ __('selected') }}
+                    </span>
+                    <button type="button" wire:click="bulkMarkRead" class="notif-btn notif-btn-ghost">
+                        @svg('heroicon-o-check', 'notif-btn-icon')
+                        <span>{{ __('Mark read') }}</span>
+                    </button>
+                    <button type="button" wire:click="bulkMarkUnread" class="notif-btn notif-btn-ghost">
+                        @svg('heroicon-o-envelope', 'notif-btn-icon')
+                        <span>{{ __('Mark unread') }}</span>
+                    </button>
+                    <button type="button"
+                            wire:click="bulkDelete"
+                            onclick="return confirm('{{ __('Delete the selected notifications?') }}')"
+                            class="notif-btn notif-btn-danger">
+                        @svg('heroicon-o-trash', 'notif-btn-icon')
+                        <span>{{ __('Delete') }}</span>
+                    </button>
+                </div>
+            @endif
+        </div>
+
+        {{-- ── List ─────────────────────────────────────────────── --}}
+        @if($notifications->isEmpty())
+            <div class="notif-empty">
+                @svg('heroicon-o-inbox', 'notif-empty-icon')
+                <div class="notif-empty-title">
+                    @switch($filter)
+                        @case('unread') {{ __('No unread notifications.') }} @break
+                        @case('read')   {{ __('No read notifications yet.') }} @break
+                        @default        {{ __('No notifications yet.') }}
+                    @endswitch
+                </div>
+                <div class="notif-empty-sub">{{ __('We will let you know when something new happens.') }}</div>
+            </div>
+        @else
+            <div class="notif-select-all-row">
+                <label class="notif-checkbox">
+                    <input type="checkbox" wire:model.live="selectAll">
+                    <span></span>
+                </label>
+                <span class="notif-select-all-label">{{ __('Select all visible') }}</span>
+            </div>
+
+            <ul class="notif-list">
+                @foreach($notifications as $notif)
+                    @php
+                        $offre       = $notif->type === 'offre' ? $notif->offre : null;
+                        $offreActive = $offre && (bool) $offre->is_published
+                            && (! $offre->deadline || $offre->deadline >= now()->startOfDay());
+
+                        $typeLabel = match ($notif->type) {
+                            'offre'       => __('Job offer'),
+                            'validated'   => __('Validated'),
+                            'rejected'    => __('Rejected'),
+                            'application' => __('Application'),
+                            'result'      => __('Result'),
+                            default       => __('Info'),
+                        };
+
+                        $typeIcon = match ($notif->type) {
+                            'offre'       => 'heroicon-o-briefcase',
+                            'validated'   => 'heroicon-o-check-circle',
+                            'rejected'    => 'heroicon-o-x-circle',
+                            'application' => 'heroicon-o-paper-airplane',
+                            'result'      => 'heroicon-o-trophy',
+                            default       => 'heroicon-o-bell',
+                        };
+                    @endphp
+
+                    <li class="notif-row {{ $notif->is_read ? 'is-read' : 'is-unread' }}" wire:key="notif-{{ $notif->id }}">
+                        <label class="notif-checkbox">
+                            <input type="checkbox" wire:model.live="selected" value="{{ $notif->id }}">
+                            <span></span>
+                        </label>
+
+                        <span class="notif-type type-{{ $notif->type }}" aria-label="{{ $typeLabel }}">
+                            @svg($typeIcon, 'notif-type-icon')
+                        </span>
+
+                        <div class="notif-body">
+                            <div class="notif-row-head">
+                                <span class="notif-type-tag type-{{ $notif->type }}">{{ $typeLabel }}</span>
+                                @if(! $notif->is_read) <span class="notif-dot" title="{{ __('Unread') }}"></span> @endif
+                                <span class="notif-row-time">{{ $notif->created_at->diffForHumans() }}</span>
+                            </div>
+
+                            <div class="notif-row-title">{{ $notif->title }}</div>
+                            <p class="notif-row-message">{{ $notif->message }}</p>
+
+                            @if($offre)
+                                <div class="notif-offer">
+                                    <div class="notif-offer-title">{{ $offre->title }}</div>
+
+                                    <div class="notif-offer-meta">
+                                        @if($offre->contract_type)
+                                            <span class="notif-chip">{{ $offre->contract_type }}</span>
+                                        @endif
+                                        @if($offre->domain)
+                                            <span class="notif-chip">{{ $offre->domain }}</span>
+                                        @endif
+                                        @if($offre->location)
+                                            <span class="notif-chip">{{ $offre->location }}</span>
+                                        @endif
+                                        @if($offre->deadline)
+                                            <span class="notif-chip notif-chip-amber">
+                                                @svg('heroicon-o-clock', 'notif-chip-icon')
+                                                {{ __('admin.deadline') }} {{ $offre->deadline->format('d/m/Y') }}
+                                            </span>
+                                        @endif
+                                        @unless($offreActive)
+                                            <span class="notif-chip notif-chip-muted">
+                                                @svg('heroicon-o-no-symbol', 'notif-chip-icon')
+                                                {{ __('Offer closed') }}
+                                            </span>
+                                        @endunless
+                                    </div>
+
+                                    @if($offre->description)
+                                        <p class="notif-offer-desc">
+                                            {{ \Illuminate\Support\Str::limit($offre->description, 220) }}
+                                        </p>
+                                    @endif
+                                </div>
                             @endif
                         </div>
-                    </div>
-                    <a href="/candidate/choix-candidature" class="postuler-btn">{{ __('Apply to an Offer') }} →</a>
-                </div>
-            @endforeach
-        </div>
-    @endif
+
+                        <div class="notif-row-actions">
+                            @if($offreActive)
+                                <a href="{{ route('filament.candidate.pages.choix-candidature') . '#offre-' . $offre->id }}"
+                                   class="notif-btn notif-btn-primary">
+                                    <span>{{ __('View offer') }}</span>
+                                    @svg('heroicon-o-arrow-right', 'notif-btn-icon')
+                                </a>
+                            @elseif(in_array($notif->type, ['validated', 'rejected', 'application', 'result'], true))
+                                <a href="{{ route('filament.candidate.pages.applications') }}"
+                                   class="notif-btn notif-btn-primary">
+                                    <span>{{ __('View applications') }}</span>
+                                    @svg('heroicon-o-arrow-right', 'notif-btn-icon')
+                                </a>
+                            @endif
+
+                            <button type="button"
+                                    wire:click="toggleRead({{ $notif->id }})"
+                                    class="notif-btn notif-btn-icon-only notif-btn-ghost"
+                                    title="{{ $notif->is_read ? __('Mark unread') : __('Mark read') }}">
+                                @if($notif->is_read)
+                                    @svg('heroicon-o-envelope', 'notif-btn-icon')
+                                @else
+                                    @svg('heroicon-o-envelope-open', 'notif-btn-icon')
+                                @endif
+                            </button>
+
+                            <button type="button"
+                                    wire:click="deleteOne({{ $notif->id }})"
+                                    onclick="return confirm('{{ __('Delete this notification?') }}')"
+                                    class="notif-btn notif-btn-icon-only notif-btn-ghost notif-btn-danger"
+                                    title="{{ __('Delete') }}">
+                                @svg('heroicon-o-trash', 'notif-btn-icon')
+                            </button>
+                        </div>
+                    </li>
+                @endforeach
+            </ul>
+        @endif
+    </div>
 </x-filament-panels::page>

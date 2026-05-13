@@ -118,16 +118,23 @@ class OffreResource extends Resource
                     ->modalHeading(__('admin.notify_all_heading'))
                     ->modalDescription(__('admin.notify_all_desc'))
                     ->action(function ($record) {
-                        $candidats = User::where('is_admin', false)->get();
-                        foreach ($candidats as $candidat) {
-                            CandidateNotification::create([
-                                'user_id'  => $candidat->id,
-                                'type'     => 'offre',
-                                'title'    => '💼 ' . __('admin.new_offer_published'),
-                                'message'  => __('admin.new_offer_msg', ['title' => $record->title]),
-                                'offre_id' => $record->id,
-                            ]);
+                        $candidats = User::role('candidate')->get();
+                        $now = now();
+                        $rows = $candidats->map(fn ($c) => [
+                            'user_id'    => $c->id,
+                            'type'       => 'offre',
+                            'title'      => '💼 ' . __('admin.new_offer_published'),
+                            'message'    => __('admin.new_offer_msg', ['title' => $record->title]),
+                            'is_read'    => false,
+                            'offre_id'   => $record->id,
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ])->all();
+
+                        if (! empty($rows)) {
+                            CandidateNotification::insert($rows);
                         }
+
                         Notification::make()->title($candidats->count() . ' ' . __('admin.candidates_notified'))->success()->send();
                     })
                     ->visible(fn ($record) => $record->is_published),

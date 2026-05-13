@@ -57,6 +57,7 @@ class CandidateService
     public function getNotifications(User $user): Collection
     {
         return CandidateNotification::where('user_id', $user->id)
+            ->with('offre')
             ->latest()
             ->get();
     }
