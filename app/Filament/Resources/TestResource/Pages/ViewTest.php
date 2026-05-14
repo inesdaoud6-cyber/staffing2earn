@@ -16,11 +16,6 @@ class ViewTest extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\Action::make('manage_questions')
-                ->label(__('test.manage-questions'))
-                ->icon('heroicon-o-question-mark-circle')
-                ->color('info')
-                ->url(fn () => TestResource::getUrl('questions', ['record' => $this->record])),
             Actions\EditAction::make()
                 ->label('Modifier propriétés'),
         ];

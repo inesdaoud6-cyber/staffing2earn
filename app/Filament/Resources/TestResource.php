@@ -3,6 +3,9 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\TestResource\Pages;
+use App\Models\Block;
+use App\Models\Group;
+use App\Models\Question;
 use App\Models\Test;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -11,9 +14,14 @@ use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
 
 class TestResource extends Resource
 {
+    /** Value for "questions without a group" in group selects. */
+    public const GROUP_DIRECT_VALUE = '__direct__';
+
     protected static ?string $model = Test::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-check';
@@ -75,7 +83,212 @@ class TestResource extends Resource
                     ->extraInputAttributes(['class' => 'fi-input tabular-nums max-w-xs'])
                     ->visible(fn (Get $get): bool => (bool) $get('whole_test_timer_enabled')),
             ])->columns(2),
+            Forms\Components\Section::make(__('test.blocks_section'))->schema([
+                Forms\Components\Repeater::make('block_assignments')
+                    ->label(__('test.blocks_repeater_label'))
+                    ->helperText(__('test.blocks_section_help'))
+                    ->schema([
+                        Forms\Components\Grid::make(2)->schema([
+                            Forms\Components\Select::make('block_id')
+                                ->label(__('test.filter-block'))
+                                ->options(
+                                    fn (): array => Block::query()
+                                        ->orderBy('order')
+                                        ->orderBy('name')
+                                        ->pluck('name', 'id')
+                                        ->all()
+                                )
+                                ->searchable(false)
+                                ->native(true)
+                                ->live(debounce: 0)
+                                ->afterStateUpdated(function (Set $set): void {
+                                    $set('group_id', null);
+                                    $set('question_ids', []);
+                                }),
+                            Forms\Components\Select::make('group_id')
+                                ->label(__('test.filter-group'))
+                                ->placeholder(__('test.choose-group'))
+                                ->options(function (Get $get): array {
+                                    $blockId = $get('block_id');
+                                    if (! $blockId) {
+                                        return [];
+                                    }
+
+                                    $opts = [
+                                        self::GROUP_DIRECT_VALUE => __('test.scope-direct-on-block'),
+                                    ];
+
+                                    $groups = Group::query()
+                                        ->where('block_id', $blockId)
+                                        ->orderBy('order')
+                                        ->orderBy('name')
+                                        ->pluck('name', 'id')
+                                        ->all();
+
+                                    return $opts + $groups;
+                                })
+                                ->searchable(false)
+                                ->native(true)
+                                ->live(debounce: 0)
+                                ->afterStateUpdated(fn (Set $set) => $set('question_ids', [])),
+                        ]),
+                        Forms\Components\Placeholder::make('pick_group_first')
+                            ->label('')
+                            ->content(fn (): HtmlString => new HtmlString(
+                                '<p class="text-sm text-gray-500 dark:text-gray-400">'
+                                .e(__('test.pick-group-for-questions'))
+                                .'</p>'
+                            ))
+                            ->visible(fn (Get $get): bool => filled($get('block_id'))
+                                && ! filled($get('group_id')))
+                            ->columnSpanFull(),
+                        Forms\Components\CheckboxList::make('question_ids')
+                            ->label(__('test.selectionner-questions'))
+                            ->options(function (Get $get): array {
+                                $blockId = $get('block_id');
+                                $groupFilter = $get('group_id');
+                                if (! $blockId || $groupFilter === null || $groupFilter === '') {
+                                    return [];
+                                }
+
+                                $q = Question::query()->where('block_id', $blockId);
+                                if ($groupFilter === self::GROUP_DIRECT_VALUE) {
+                                    $q->whereNull('group_id');
+                                } else {
+                                    $q->where('group_id', $groupFilter);
+                                }
+
+                                return $q->orderBy('level')
+                                    ->orderBy('id')
+                                    ->get()
+                                    ->mapWithKeys(fn (Question $question) => [
+                                        $question->id => Str::limit((string) $question->question_fr, 90),
+                                    ])
+                                    ->all();
+                            })
+                            ->visible(fn (Get $get): bool => filled($get('block_id')) && filled($get('group_id')))
+                            ->bulkToggleable()
+                            ->columns(1)
+                            ->gridDirection('row')
+                            ->default([])
+                            ->live(debounce: 0)
+                            ->helperText(__('test.test-form-questions-hint')),
+                    ])
+                    ->addActionLabel(__('test.add-block'))
+                    ->defaultItems(0)
+                    ->reorderable(false)
+                    ->itemLabel(function (array $state): ?string {
+                        if (empty($state['block_id'])) {
+                            return null;
+                        }
+
+                        $block = Block::query()->find($state['block_id']);
+                        if (! $block) {
+                            return null;
+                        }
+
+                        $g = $state['group_id'] ?? null;
+                        if ($g === null || $g === '') {
+                            return $block->name;
+                        }
+                        if ($g === self::GROUP_DIRECT_VALUE) {
+                            return $block->name.' — '.__('test.scope-direct-on-block');
+                        }
+
+                        $groupName = Group::query()->find($g)?->name;
+
+                        return $block->name.' — '.($groupName ?? '?');
+                    }),
+            ]),
         ]);
+    }
+
+    /**
+     * Build repeater rows for the test edit form: one row per (block, group) that has questions,
+     * plus one empty row per linked block that has no questions yet.
+     *
+     * @return list<array{block_id: int, group_id: int|string|null, question_ids: list<int>}>
+     */
+    public static function blockAssignmentsFormStateForTest(Test $test): array
+    {
+        $test->load([
+            'blocks' => fn ($q) => $q->orderBy('order')->orderBy('name'),
+            'questions' => fn ($q) => $q->orderBy('level')->orderBy('id'),
+        ]);
+
+        $rowsByKey = [];
+
+        foreach ($test->questions as $question) {
+            if (! $question->block_id) {
+                continue;
+            }
+
+            $gKey = $question->group_id ? (string) $question->group_id : self::GROUP_DIRECT_VALUE;
+            $rowKey = $question->block_id.'_'.$gKey;
+
+            if (! isset($rowsByKey[$rowKey])) {
+                $rowsByKey[$rowKey] = [
+                    'block_id' => (int) $question->block_id,
+                    'group_id' => $question->group_id ? (int) $question->group_id : self::GROUP_DIRECT_VALUE,
+                    'question_ids' => [],
+                ];
+            }
+
+            $rowsByKey[$rowKey]['question_ids'][] = (int) $question->id;
+        }
+
+        $rows = array_values($rowsByKey);
+
+        foreach ($test->blocks as $block) {
+            $hasRow = collect($rows)->contains(fn (array $r): bool => (int) ($r['block_id'] ?? 0) === (int) $block->id);
+            if (! $hasRow) {
+                $rows[] = [
+                    'block_id' => (int) $block->id,
+                    'group_id' => null,
+                    'question_ids' => [],
+                ];
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Persist blocks and questions from the test form repeater.
+     *
+     * @param  array<int, array{block_id?: mixed, group_id?: mixed, question_ids?: mixed}>  $assignments
+     */
+    public static function syncTestFromBlockAssignments(Test $test, array $assignments): void
+    {
+        $blockIds = collect($assignments)
+            ->pluck('block_id')
+            ->filter(fn ($id) => filled($id))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        $test->blocks()->sync($blockIds);
+
+        $questionIds = collect($assignments)
+            ->pluck('question_ids')
+            ->flatten()
+            ->filter(fn ($id) => filled($id))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        $test->questions()->sync($questionIds);
+    }
+
+    /**
+     * @deprecated Use {@see syncTestFromBlockAssignments()}
+     * @param  array<int, array{block_id?: int|string|null}>  $assignments
+     */
+    public static function syncTestBlocksFromAssignments(Test $test, array $assignments): void
+    {
+        static::syncTestFromBlockAssignments($test, $assignments);
     }
 
     public static function table(Table $table): Table
@@ -89,11 +302,6 @@ class TestResource extends Resource
                 Tables\Columns\TextColumn::make('created_at')->label('Date')->date('d/m/Y'),
             ])
             ->actions([
-                Tables\Actions\Action::make('attach_questions')
-                    ->label('Associer les questions')
-                    ->icon('heroicon-o-link')
-                    ->color('info')
-                    ->url(fn (Test $record): string => static::getUrl('questions', ['record' => $record])),
                 Tables\Actions\EditAction::make()->label('Modifier'),
                 Tables\Actions\DeleteAction::make()->label('Supprimer'),
             ]);
@@ -110,7 +318,6 @@ class TestResource extends Resource
             'index' => Pages\ListTests::route('/'),
             'create' => Pages\CreateTest::route('/create'),
             'edit' => Pages\EditTest::route('/{record}/edit'),
-            'questions' => Pages\ManageTestQuestions::route('/{record}/questions'),
             'view' => Pages\ViewTest::route('/{record}'),
         ];
     }

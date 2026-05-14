@@ -14,6 +14,7 @@ use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Notifications\Notification;
 use Filament\Pages\Concerns\InteractsWithFormActions;
 use Filament\Resources\Pages\Page;
@@ -94,14 +95,29 @@ class CreateQuestionsForm extends Page implements HasForms
                     ->schema([
                         Forms\Components\Select::make('block_id')
                             ->label('Block')
-                            ->options(Block::pluck('name', 'id'))
+                            ->options(Block::query()->orderBy('order')->orderBy('name')->pluck('name', 'id'))
                             ->searchable()
-                            ->nullable(),
+                            ->nullable()
+                            ->live()
+                            ->afterStateUpdated(fn (Set $set) => $set('group_id', null)),
                         Forms\Components\Select::make('group_id')
                             ->label(__('admin.group'))
-                            ->options(Group::pluck('name', 'id'))
+                            ->options(function (Get $get): array {
+                                $blockId = $get('block_id');
+                                if (! filled($blockId)) {
+                                    return [];
+                                }
+
+                                return Group::query()
+                                    ->where('block_id', $blockId)
+                                    ->orderBy('order')
+                                    ->orderBy('name')
+                                    ->pluck('name', 'id')
+                                    ->all();
+                            })
                             ->searchable()
-                            ->nullable(),
+                            ->nullable()
+                            ->disabled(fn (Get $get): bool => ! filled($get('block_id'))),
                         Forms\Components\Select::make('offre_id')
                             ->label(__('admin.associated_offer'))
                             ->options(Offre::query()->where('is_published', true)->pluck('title', 'id'))

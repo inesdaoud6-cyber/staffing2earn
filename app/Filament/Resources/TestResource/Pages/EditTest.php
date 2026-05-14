@@ -12,12 +12,24 @@ class EditTest extends EditRecord
 
     protected function mutateFormDataBeforeFill(array $data): array
     {
-        return TestResource::splitWholeTestTimerIntoHourMinuteFields($data);
+        $data = TestResource::splitWholeTestTimerIntoHourMinuteFields($data);
+
+        $data['block_assignments'] = TestResource::blockAssignmentsFormStateForTest($this->record);
+
+        return $data;
     }
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
+        unset($data['block_assignments']);
+
         return TestResource::mergeWholeTestTimerFromHourMinuteFields($data);
+    }
+
+    protected function afterSave(): void
+    {
+        $assignments = $this->form->getState()['block_assignments'] ?? [];
+        TestResource::syncTestFromBlockAssignments($this->record, $assignments);
     }
 
     protected function getHeaderActions(): array

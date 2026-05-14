@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Validation\ValidationException;
 
 class Question extends Model
 {
@@ -35,6 +36,34 @@ class Question extends Model
         'scorable' => 'boolean',
         'auto_evaluation' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (Question $question): void {
+            if (empty($question->group_id)) {
+                return;
+            }
+
+            $group = Group::query()->find($question->group_id);
+            if (! $group) {
+                throw ValidationException::withMessages([
+                    'group_id' => __('validation.exists', ['attribute' => 'group_id']),
+                ]);
+            }
+
+            if (empty($question->block_id)) {
+                $question->block_id = $group->block_id;
+
+                return;
+            }
+
+            if ((int) $question->block_id !== (int) $group->block_id) {
+                throw ValidationException::withMessages([
+                    'group_id' => __('test.group-block-mismatch'),
+                ]);
+            }
+        });
+    }
 
     public function block(): BelongsTo
     {
