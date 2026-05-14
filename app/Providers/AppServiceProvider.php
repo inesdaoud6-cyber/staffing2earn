@@ -9,7 +9,10 @@ use App\Models\Offre;
 use App\Observers\ApplicationProgressObserver;
 use App\Observers\OffreObserver;
 use Filament\Http\Responses\Auth\Contracts\LogoutResponse as LogoutResponseContract;
+use Filament\Support\Facades\FilamentView;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
 
@@ -42,5 +45,17 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('send-candidate-notification', fn ($user) => $user->hasRole('admin'));
         Gate::define('download-candidate-cv', fn ($user) => $user->hasRole('admin'));
         Gate::define('view-test-results-detail', fn ($user) => $user->hasRole('admin'));
+
+        FilamentView::registerRenderHook(
+            PanelsRenderHook::RESOURCE_PAGES_LIST_RECORDS_TABLE_BEFORE,
+            function (): string {
+                if (! (Livewire::current() instanceof \App\Filament\Resources\UserResource\Pages\ListUsers)) {
+                    return '';
+                }
+
+                return View::make('filament.resources.user-list-records-toolbar')->render();
+            },
+            scopes: [\App\Filament\Resources\UserResource::class],
+        );
     }
 }

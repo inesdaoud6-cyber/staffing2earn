@@ -20,11 +20,8 @@ class CandidateMiddleware
             return $next($request);
         }
 
-        if (! $user->is_admin) {
-            $user->assignRole('candidate');
-            return $next($request);
-        }
+        $user->assignRole('candidate');
 
-        return redirect('/')->with('error', __('Accès non autorisé.'));
+        return $next($request);
     }
 }

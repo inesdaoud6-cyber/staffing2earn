@@ -99,6 +99,8 @@ class AuthController extends Controller
                 'password' => Hash::make($validated['password']),
             ]);
 
+            $user->assignRole('candidate');
+
             $this->candidateService->createFromUser($user, $validated);
 
             return $user;

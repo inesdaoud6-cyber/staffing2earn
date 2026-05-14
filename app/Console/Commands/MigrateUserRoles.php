@@ -12,9 +12,9 @@ class MigrateUserRoles extends Command
 
     public function handle(): void
     {
-        User::all()->each(function (User $user) {
+        User::query()->each(function (User $user): void {
             if ($user->getRoleNames()->isEmpty()) {
-                $user->assignRole($user->is_admin ? 'admin' : 'candidate');
+                $user->assignRole('candidate');
             }
         });
 
