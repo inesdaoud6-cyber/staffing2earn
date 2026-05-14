@@ -3,7 +3,7 @@
 
     @if($isAdminViewing)
     <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:0.75rem 1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;">
-        <span style="color:#92400e;font-weight:600;">🛡️ Vue administrateur — informations confidentielles visibles</span>
+        <span style="color:#92400e;font-weight:600;">🛡️{{ __('Vue administrateur — informations confidentielles visibles') }} </span>
         <a href="/admin" style="background:#f59e0b;color:#fff;padding:0.35rem 0.9rem;border-radius:6px;font-size:0.85rem;text-decoration:none;">← {{ __('Back to admin') }}</a>
     </div>
     @endif
@@ -249,7 +249,7 @@
 
     @can('edit-candidate-status')
     <div style="background:#eff6ff;border:1px solid #3b82f6;border-radius:12px;padding:1.25rem;margin-top:1rem;">
-        <div style="color:#1e40af;font-weight:700;font-size:0.95rem;margin-bottom:0.5rem;">🔒 Statut candidat (admin)</div>
+        <div style="color:#1e40af;font-weight:700;font-size:0.95rem;margin-bottom:0.5rem;">🔒{{ __(' Statut candidat (admin)') }} </div>
         <div style="color:#374151;font-size:0.9rem;">
             {{ __('Status') }} : <strong>{{ $candidate?->status ?? '—' }}</strong>
         </div>

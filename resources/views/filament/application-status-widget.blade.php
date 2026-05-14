@@ -1,6 +1,6 @@
 <x-filament-widgets::widget>
     <x-filament::section>
-        <x-slot name="heading">Statut des candidatures</x-slot>
+        <x-slot name="heading"> {{__('Statut des candidatures')}}</x-slot>
         <div style="display:flex;flex-direction:column;gap:12px">
             @foreach([
                 ['label'=>'Validés',  'value'=>$validated,  'color'=>'#22c55e'],

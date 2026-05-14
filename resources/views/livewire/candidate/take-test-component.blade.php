@@ -19,8 +19,8 @@
     @if($pageStatus === 'no_application')
         <div style="text-align:center;padding:3rem;background:#f8f9ff;border-radius:14px;border:1px solid #ede9fe;">
             <div style="font-size:3rem;margin-bottom:1rem;">📋</div>
-            <h2 style="font-size:1.25rem;font-weight:800;color:#1a1a8c;margin-bottom:0.5rem;">Aucune candidature active</h2>
-            <p style="color:#6b7280;margin-bottom:1rem;">Vous n'avez pas encore de candidature avec un test associé.</p>
+            <h2 style="font-size:1.25rem;font-weight:800;color:#1a1a8c;margin-bottom:0.5rem;">{{ __('Aucune candidature active') }}</h2>
+            <p style="color:#6b7280;margin-bottom:1rem;">{{ __('Vous n avez pas encore de candidature avec un test associé.') }}</p>
             <a href="/candidate/choix-candidature"
                style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.7rem 1.5rem;border-radius:10px;font-weight:700;color:white;background:linear-gradient(135deg,#1a1a8c,#3730a3);text-decoration:none;">
                 🚀 {{ __('New application') }}
@@ -30,34 +30,34 @@
     @elseif($pageStatus === 'waiting_admin')
         <div style="text-align:center;padding:3rem;background:#fffbeb;border:1px solid #fcd34d;border-radius:14px;">
             <div style="font-size:3rem;margin-bottom:1rem;">⏳</div>
-            <h2 style="font-size:1.25rem;font-weight:800;color:#92400e;margin-bottom:0.5rem;">En attente de validation</h2>
-            <p style="color:#78350f;">L'administrateur doit valider votre candidature avant que vous puissiez passer le test.</p>
+            <h2 style="font-size:1.25rem;font-weight:800;color:#92400e;margin-bottom:0.5rem;"> {{ __('En attente de validation') }}</h2>
+            <p style="color:#78350f;">{{ __('L administrateur doit valider votre candidature avant que vous puissiez passer le test.') }}</p>
         </div>
 
     @elseif($pageStatus === 'waiting_level_validation')
         <div style="text-align:center;padding:3rem;background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;">
             <div style="font-size:3rem;margin-bottom:1rem;">🎯</div>
             <h2 style="font-size:1.25rem;font-weight:800;color:#1e40af;margin-bottom:0.5rem;">Niveau {{ $currentLevel }} soumis</h2>
-            <p style="color:#1d4ed8;">Vos réponses ont été enregistrées. En attente de validation de l'administrateur.</p>
+            <p style="color:#1d4ed8;">{{ __('Vos réponses ont été enregistrées. En attente de validation de l administrateur.') }}</p>
         </div>
 
     @elseif($pageStatus === 'all_validated')
         <div style="text-align:center;padding:3rem;background:#f0fdf4;border:1px solid #86efac;border-radius:14px;">
             <div style="font-size:3rem;margin-bottom:1rem;">🏆</div>
-            <h2 style="font-size:1.25rem;font-weight:800;color:#065f46;margin-bottom:0.5rem;">Félicitations !</h2>
-            <p style="color:#047857;">Votre candidature a été entièrement validée !</p>
+            <h2 style="font-size:1.25rem;font-weight:800;color:#065f46;margin-bottom:0.5rem;">{{ __('Félicitations !') }} </h2>
+            <p style="color:#047857;">{{ __('Votre candidature a été entièrement validée !') }}</p>
         </div>
 
     @elseif($pageStatus === 'test')
         <div style="background:linear-gradient(135deg,#1a1a8c,#3730a3);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;">
                 <div>
-                    <h2 style="font-size:1.1rem;font-weight:800;color:white;">🎯 Niveau {{ $currentLevel }} — Questions</h2>
-                    <p style="color:#c7d2fe;font-size:0.85rem;">Répondez à toutes les questions puis soumettez</p>
+                    <h2 style="font-size:1.1rem;font-weight:800;color:white;">🎯 Niveau {{ $currentLevel }}{{ __('— Questions') }} </h2>
+                    <p style="color:#c7d2fe;font-size:0.85rem;">{{ __('Répondez à toutes les questions puis soumettez') }}</p>
                 </div>
                 <div style="text-align:right;">
                     <div style="font-size:1.75rem;font-weight:800;color:white;">{{ $answeredCount }}/{{ $totalQuestions }}</div>
-                    <div style="font-size:0.72rem;color:#a5b4fc;">réponses</div>
+                    <div style="font-size:0.72rem;color:#a5b4fc;">{{ __('réponses') }}</div>
                 </div>
             </div>
             <div style="background:rgba(255,255,255,0.2);border-radius:999px;height:6px;overflow:hidden;">
@@ -112,7 +112,7 @@
             @elseif($question->component === 'list' && $question->possible_answers)
                 <select wire:model.live="answers.{{ $question->id }}"
                     style="width:100%;padding:0.7rem 0.9rem;border:1.5px solid #e5e7eb;border-radius:10px;font-size:0.95rem;color:#374151;background:white;outline:none;box-sizing:border-box;">
-                    <option value="">-- Choisir --</option>
+                    <option value="">{{ __('-- Choisir --') }}</option>
                     @foreach($question->possible_answers as $opt)
                     <option value="{{ $opt }}">{{ $opt }}</option>
                     @endforeach
@@ -134,8 +134,8 @@
                 wire:loading.attr="disabled"
                 wire:target="submitLevel"
                 style="display:flex;align-items:center;gap:0.5rem;padding:0.8rem 1.75rem;border-radius:10px;border:none;background:linear-gradient(135deg,#1a1a8c,#3730a3);color:white;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(26,26,140,0.3);">
-                <span wire:loading.remove wire:target="submitLevel">✅ Soumettre Niveau {{ $currentLevel }}</span>
-                <span wire:loading wire:target="submitLevel">⏳ Envoi...</span>
+                <span wire:loading.remove wire:target="submitLevel">✅ {{ __('Soumettre Niveau ') }}{{ $currentLevel }}</span>
+                <span wire:loading wire:target="submitLevel">⏳{{ __('Envoi...') }} </span>
             </button>
         </div>
     @endif
