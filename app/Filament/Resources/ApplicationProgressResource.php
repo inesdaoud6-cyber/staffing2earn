@@ -351,10 +351,15 @@ class ApplicationProgressResource extends Resource
                     ->action(function (ApplicationProgress $record) {
                         $newLevel = $record->current_level + 1;
                         $oldLevel = $record->current_level;
-                        $record->update([
+                        $payload = [
                             'current_level' => $newLevel,
                             'status'        => 'in_progress',
-                        ]);
+                        ];
+                        $nextTestId = $record->offre?->testIdForLevel($newLevel);
+                        if ($nextTestId !== null) {
+                            $payload['test_id'] = $nextTestId;
+                        }
+                        $record->update($payload);
                         CandidateNotification::create([
                             'user_id'  => $record->candidate->user_id,
                             'type'     => 'info',

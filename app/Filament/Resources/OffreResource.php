@@ -9,10 +9,12 @@ use App\Models\Test;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Notifications\Notification;
+use Illuminate\Support\HtmlString;
 
 class OffreResource extends Resource
 {
@@ -51,13 +53,43 @@ class OffreResource extends Resource
                 Forms\Components\Toggle::make('is_published')->label(__('admin.publish')),
             ])->columns(2),
 
-            Forms\Components\Section::make(__('admin.associated_test'))->schema([
-                Forms\Components\Select::make('test_id')
-                    ->label(__('admin.select_test'))
-                    ->options(Test::pluck('name', 'id'))
-                    ->searchable()
-                    ->placeholder(__('admin.choose_test')),
-            ]),
+            Forms\Components\Section::make('Parcours par niveau')
+                ->description('Le niveau 1 est toujours le CV. Indiquez le nombre total de niveaux, puis choisissez un test pour chaque niveau à partir du niveau 2.')
+                ->schema(function (Get $get): array {
+                    $fields = [
+                        Forms\Components\TextInput::make('levels_count')
+                            ->label('Nombre de niveaux (total)')
+                            ->numeric()
+                            ->minValue(2)
+                            ->maxValue(20)
+                            ->default(2)
+                            ->required()
+                            ->live(debounce: 400)
+                            ->helperText('Exemple : 3 = CV + 2 tests.'),
+                        Forms\Components\Placeholder::make('niveau_1_cv')
+                            ->label('Niveau 1')
+                            ->content(new HtmlString(
+                                '<p class="text-sm text-gray-600 dark:text-gray-400">'
+                                . 'Envoi du CV — obligatoire pour toutes les offres. Aucun test à sélectionner.'
+                                . '</p>'
+                            )),
+                    ];
+
+                    $levelsCount = max(2, min(20, (int) ($get('levels_count') ?? 2)));
+
+                    for ($level = 2; $level <= $levelsCount; $level++) {
+                        $idx = $level - 2;
+                        $fields[] = Forms\Components\Select::make('level_test_ids.' . $idx)
+                            ->label('Niveau ' . $level . ' — test')
+                            ->options(fn () => Test::query()->orderBy('name')->pluck('name', 'id'))
+                            ->searchable()
+                            ->preload()
+                            ->required();
+                    }
+
+                    return $fields;
+                })
+                ->columns(1),
         ]);
     }
 
@@ -90,6 +122,10 @@ class OffreResource extends Resource
                             ->color('info'),
                     ]),
                     Tables\Columns\Layout\Split::make([
+                        Tables\Columns\TextColumn::make('levels_count')
+                            ->label('Niveaux')
+                            ->badge()
+                            ->color('gray'),
                         Tables\Columns\TextColumn::make('test.name')
                             ->label(__('admin.associated_test'))
                             ->badge()
@@ -142,6 +178,31 @@ class OffreResource extends Resource
                 Tables\Actions\EditAction::make()->label(__('Edit')),
                 Tables\Actions\DeleteAction::make()->label(__('admin.delete')),
             ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public static function normalizeLevelsFormData(array $data): array
+    {
+        $n = max(2, min(20, (int) ($data['levels_count'] ?? 2)));
+        $data['levels_count'] = $n;
+
+        $raw = $data['level_test_ids'] ?? [];
+        if (! is_array($raw)) {
+            $raw = [];
+        }
+
+        $ids = [];
+        for ($i = 0; $i < $n - 1; $i++) {
+            $v = $raw[$i] ?? null;
+            $ids[] = $v !== null && $v !== '' ? (int) $v : null;
+        }
+
+        $data['level_test_ids'] = $ids;
+
+        return $data;
     }
 
     public static function getPages(): array

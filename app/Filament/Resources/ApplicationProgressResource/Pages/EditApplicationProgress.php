@@ -32,7 +32,8 @@ class EditApplicationProgress extends EditRecord
                 ->modalDescription(__('admin.application_accept_cv_description'))
                 ->visible(fn () => $this->record->status === 'pending')
                 ->action(function () {
-                    $testId = $this->form->getState()['test_id'] ?? $this->record->test_id;
+                    $testId = $this->record->offre?->firstTestIdAfterCv()
+                        ?? ($this->form->getState()['test_id'] ?? $this->record->test_id);
                     if (! $testId) {
                         Notification::make()
                             ->title(__('admin.application_accept_needs_test'))

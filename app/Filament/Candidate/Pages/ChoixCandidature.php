@@ -144,7 +144,7 @@ class ChoixCandidature extends Page
         ApplicationProgress::create([
             'candidate_id'    => $candidate->id,
             'offre_id'        => $offre?->id,
-            'test_id'         => $offre?->test_id,
+            'test_id'         => $offre?->firstTestIdAfterCv(),
             'cv_path'         => $cvPath,
             'status'          => 'pending',
             'current_level'   => 1,
