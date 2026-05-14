@@ -3,7 +3,7 @@
 
     @if($isAdminViewing)
     <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:0.75rem 1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;">
-        <span style="color:#92400e;font-weight:600;">🛡️ Vous consultez cet espace en tant qu'administrateur</span>
+        <span style="color:#92400e;font-weight:600;">🛡️ {{__('Vous consultez cet espace en tant qu administrateur')}}</span>
         <a href="/admin" style="background:#f59e0b;color:#fff;padding:0.35rem 0.9rem;border-radius:6px;font-size:0.85rem;text-decoration:none;">← {{ __('Back to admin') }}</a>
     </div>
     @endif
@@ -81,8 +81,8 @@
                         </span>
                     </div>
                     <div style="font-size:0.85rem;color:#64748b;display:flex;gap:1rem;align-items:center;">
-                        <span>Niveau: {{ $app->current_level }}</span>
-                        <span style="font-weight:700;color:#1e1ea8;">Score: {{ $app->main_score }}/100</span>
+                        <span>{{ __('Niveau:') }} {{ $app->current_level }}</span>
+                        <span style="font-weight:700;color:#1e1ea8;">{{ __('Score:') }} {{ $app->main_score }}/100</span>
                     </div>
                 </div>
                 <div style="text-align:right;">

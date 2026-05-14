@@ -225,7 +225,7 @@
                         <div class="offre-dot dot-navy"></div>
                         <div>
                             <div class="offre-title">{{ __('Free Application') }}</div>
-                            <div class="offre-domain">Tech</div>
+                            <div class="offre-domain">{{ __('Tech') }}</div>
                         </div>
                         <span class="badge-new">{{ __('Pending') }}</span>
                     </div>
@@ -233,7 +233,7 @@
                         <div class="offre-dot dot-magenta"></div>
                         <div>
                             <div class="offre-title">{{ __('Apply to an Offer') }}</div>
-                            <div class="offre-domain">Management</div>
+                            <div class="offre-domain">{{ __('Management') }}</div>
                         </div>
                         <span class="badge-new">{{ __('In Progress') }}</span>
                     </div>
@@ -241,7 +241,7 @@
                         <div class="offre-dot dot-cyan"></div>
                         <div>
                             <div class="offre-title">{{ __('Smart Tests') }}</div>
-                            <div class="offre-domain">Finance</div>
+                            <div class="offre-domain">{{ __('Finance') }}</div>
                         </div>
                         <span class="badge-new">{{ __('Validated') }}</span>
                     </div>

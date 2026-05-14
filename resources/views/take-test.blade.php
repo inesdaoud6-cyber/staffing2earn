@@ -4,7 +4,7 @@
         {{-- Header --}}
         <div class="p-4 rounded-lg" style="background-color: #581c87;">
             <h2 class="text-xl font-bold text-white">
-                🎯 Level {{ $this->currentLevel }} — {{ __('Questions') }}
+                🎯 {{ __('Level') }}{{ $this->currentLevel }} — {{ __('Questions') }}
             </h2>
             <p style="color: #d8b4fe;">
                 {{ __('Answer all questions then click "Submit"') }}
@@ -42,7 +42,7 @@
                 @elseif($question->component === 'list')
                     <select wire:model="answers.{{ $question->id }}"
                         style="width:100%; padding:12px; background-color:#374151; color:white; border:1px solid #4b5563; border-radius:8px;">
-                        <option value="">-- Choose --</option>
+                        <option value="">{{ __('-- Choose --') }}</option>
                         @if($question->possible_answers)
                             @foreach($question->possible_answers as $answer)
                                 <option value="{{ $answer }}" style="background-color:#374151; color:white;">

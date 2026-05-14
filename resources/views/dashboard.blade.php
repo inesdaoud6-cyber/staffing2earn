@@ -83,7 +83,7 @@
                                     @elseif($app->status === 'validated')
                                         <span class="status-validated">{{ __('Validated') }}</span>
                                     @else
-                                        <span class="status-rejected">Rejected</span>
+                                        <span class="status-rejected">{{ __('Rejected') }}</span>
                                     @endif
                                 </td>
                                 <td>Level {{ $app->current_level }}</td>

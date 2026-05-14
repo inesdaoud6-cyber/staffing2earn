@@ -99,11 +99,11 @@
                     @if($app->candidateProfile?->score_visibility || true)
                         <div class="mt-3 flex items-center gap-4">
                             <div>
-                                <span style="color:#9ca3af; font-size:0.85rem;">Score Principal:</span>
+                                <span style="color:#9ca3af; font-size:0.85rem;">{{ __('Score Principal:') }}</span>
                                 <span class="font-bold text-white ml-1">{{ $app->main_score }} pts</span>
                             </div>
                             <div>
-                                <span style="color:#9ca3af; font-size:0.85rem;">Score Secondaire:</span>
+                                <span style="color:#9ca3af; font-size:0.85rem;">{{ __('Score Secondaire:') }}</span>
                                 <span class="font-bold text-white ml-1">{{ $app->secondary_score }} pts</span>
                             </div>
                         </div>
