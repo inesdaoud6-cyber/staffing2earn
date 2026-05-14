@@ -226,8 +226,8 @@
 
     <div class="lang-switcher">
         @php $locale = app()->getLocale(); @endphp
-        <a href="{{ route('lang.switch', 'fr') }}" class="{{ $locale === 'fr' ? 'is-active' : '' }}">FR</a>
-        <a href="{{ route('lang.switch', 'en') }}" class="{{ $locale === 'en' ? 'is-active' : '' }}">EN</a>
-        <a href="{{ route('lang.switch', 'ar') }}" class="{{ $locale === 'ar' ? 'is-active' : '' }}">AR</a>
+        <a href="{{ route('lang.switch', 'fr') }}" data-navigate-ignore wire:navigate.off class="{{ $locale === 'fr' ? 'is-active' : '' }}">FR</a>
+        <a href="{{ route('lang.switch', 'en') }}" data-navigate-ignore wire:navigate.off class="{{ $locale === 'en' ? 'is-active' : '' }}">EN</a>
+        <a href="{{ route('lang.switch', 'ar') }}" data-navigate-ignore wire:navigate.off class="{{ $locale === 'ar' ? 'is-active' : '' }}">AR</a>
     </div>
 </div>

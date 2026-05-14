@@ -14,6 +14,7 @@ use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -21,6 +22,7 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use App\Http\Middleware\SetLocale;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -39,7 +41,19 @@ class AdminPanelProvider extends PanelProvider
             ->sidebarCollapsibleOnDesktop()
             ->renderHook(
                 'panels::topbar.end',
-                fn () => view('partials.lang-switcher-topbar')
+                fn () => view('partials.admin-topbar-actions')
+            )
+            ->renderHook(
+                PanelsRenderHook::HEAD_END,
+                fn () => view('filament.hooks.application-progress-styles')
+            )
+            ->renderHook(
+                PanelsRenderHook::HEAD_END,
+                fn () => view('filament.hooks.shell-styles')
+            )
+            ->renderHook(
+                PanelsRenderHook::SIDEBAR_FOOTER,
+                fn () => view('filament.partials.sidebar-user-card')
             )
             ->userMenuItems([
                 MenuItem::make()
@@ -49,11 +63,14 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->navigationGroups([
                 NavigationGroup::make('Recrutement')
-                    ->label(fn () => __('nav.recruitment')),
+                    ->label(fn () => __('nav.recruitment_management'))
+                    ->icon('heroicon-o-briefcase'),
                 NavigationGroup::make('Évaluations')
-                    ->label(fn () => __('nav.evaluations')),
+                    ->label(fn () => __('nav.assessment_management'))
+                    ->icon('heroicon-o-clipboard-document-check'),
                 NavigationGroup::make('Configuration')
-                    ->label(fn () => __('nav.configuration'))
+                    ->label(fn () => __('nav.system_management'))
+                    ->icon('heroicon-o-cog-6-tooth')
                     ->collapsed(),
             ])
             ->discoverResources(
@@ -83,6 +100,7 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
+                SetLocale::class,
             ])
             ->authMiddleware([
                 Authenticate::class,

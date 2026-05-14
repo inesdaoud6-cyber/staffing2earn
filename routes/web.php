@@ -34,7 +34,9 @@ Route::get('/lang/{locale}', function (string $locale) {
     if (in_array($locale, ['fr', 'en', 'ar'])) {
         session(['locale' => $locale]);
     }
-    return back();
+    // Use redirect()->back() with a fallback to home to avoid Livewire endpoint issues
+    $referer = request()->headers->get('referer', url('/'));
+    return redirect($referer);
 })->name('lang.switch');
 
 Route::middleware('auth')->group(function () {
