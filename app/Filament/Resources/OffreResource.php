@@ -10,6 +10,7 @@ use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -65,6 +66,10 @@ class OffreResource extends Resource
                             ->default(2)
                             ->required()
                             ->live(debounce: 400)
+                            ->afterStateUpdated(function (Set $set, $state, Get $get): void {
+                                $n = max(2, min(20, (int) $state));
+                                $set('level_test_ids', self::paddedLevelTestIds($get('level_test_ids'), $n));
+                            })
                             ->helperText('Exemple : 3 = CV + 2 tests.'),
                         Forms\Components\Placeholder::make('niveau_1_cv')
                             ->label('Niveau 1')
@@ -203,6 +208,21 @@ class OffreResource extends Resource
         $data['level_test_ids'] = $ids;
 
         return $data;
+    }
+
+    /**
+     * Ensure `level_test_ids` has exactly (levels_count - 1) entries (indices for tests after CV).
+     *
+     * @param  array<int|string, mixed>|null  $current
+     * @return list<int|null>
+     */
+    public static function paddedLevelTestIds(?array $current, int $levelsCount): array
+    {
+        $n = max(2, min(20, $levelsCount));
+        $need = $n - 1;
+        $cur = is_array($current) ? array_values($current) : [];
+
+        return array_pad(array_slice($cur, 0, $need), $need, null);
     }
 
     public static function getPages(): array
