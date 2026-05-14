@@ -54,7 +54,7 @@
             @endforeach
         </div>
         @else
-        <div class="empty-temoignages">{{ __('Aucun témoignage pour le moment. Soyez le premier !') }} 👇</div>
+        <div class="empty-temoignages">{{ __('temoignage.empty_list') }} 👇</div>
         @endif
     </div>
 
