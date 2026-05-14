@@ -18,21 +18,21 @@ class ApplicationProgress extends Model
         'status',
         'current_level',
         'level_status',
-        'level_started_at',
         'main_score',
         'secondary_score',
         'apply_enabled',
         'score_published',
         'is_archived',
+        'test_session_expires_at',
     ];
 
     protected $casts = [
-        'apply_enabled'    => 'boolean',
-        'score_published'  => 'boolean',
-        'is_archived'      => 'boolean',
-        'main_score'       => 'decimal:2',
-        'secondary_score'  => 'decimal:2',
-        'level_started_at' => 'datetime',
+        'apply_enabled'           => 'boolean',
+        'score_published'         => 'boolean',
+        'is_archived'             => 'boolean',
+        'main_score'              => 'decimal:2',
+        'secondary_score'         => 'decimal:2',
+        'test_session_expires_at' => 'datetime',
     ];
 
     public function candidate(): BelongsTo
@@ -80,23 +80,26 @@ class ApplicationProgress extends Model
         return $path ? asset('storage/' . $path) : null;
     }
 
-    public function isTimeLimitExceeded(): bool
+    /**
+     * Wall-clock deadline for the whole test session (all levels), set once when the candidate first opens the test.
+     */
+    public function ensureWholeTestSessionDeadline(): void
     {
-        if (! $this->level_started_at || ! $this->test) {
-            return false;
+        $test = $this->test;
+        if (! $test || ! $test->whole_test_timer_enabled || ! $test->whole_test_timer_minutes) {
+            return;
         }
-
-        $limit = $this->test->time_limit_per_level ?? null;
-
-        return $limit && now()->diffInSeconds($this->level_started_at) > $limit;
+        if ($this->test_session_expires_at) {
+            return;
+        }
+        $seconds = max(1, (int) $test->whole_test_timer_minutes) * 60;
+        $this->update([
+            'test_session_expires_at' => now()->addSeconds($seconds),
+        ]);
     }
 
-    public function startLevel(int $level): void
+    public function wholeTestSessionExpired(): bool
     {
-        $this->update([
-            'current_level'    => $level,
-            'level_status'     => 'in_progress',
-            'level_started_at' => now(),
-        ]);
+        return $this->test_session_expires_at && now()->greaterThanOrEqualTo($this->test_session_expires_at);
     }
 }

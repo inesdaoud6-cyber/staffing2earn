@@ -10,7 +10,6 @@ use App\Models\QuestionResponse;
 use App\Models\Response;
 use App\Services\CandidateService;
 use App\Services\NotificationService;
-use Livewire\Attributes\On;
 use Livewire\Component;
 
 class TakeTestComponent extends Component
@@ -24,7 +23,6 @@ class TakeTestComponent extends Component
     public string $pageStatus     = 'no_application';
     public int    $totalQuestions = 0;
     public int    $answeredCount  = 0;
-    public bool   $timeExpired    = false;
 
     private ?ApplicationProgress $cachedApplication = null;
     private $cachedQuestions = null;
@@ -127,40 +125,12 @@ class TakeTestComponent extends Component
         return $this->cachedQuestions;
     }
 
-    public function isTimeLimitExceeded(): bool
-    {
-        $application = $this->getApplication();
-
-        if (! $application || ! $application->level_started_at || ! $application->test) {
-            return false;
-        }
-
-        $timeLimit = $application->test->time_limit_per_level ?? null;
-
-        if (! $timeLimit) {
-            return false;
-        }
-
-        return now()->diffInSeconds($application->level_started_at) > $timeLimit;
-    }
-
     public function updatedAnswers(): void
     {
         $this->answeredCount = count(array_filter(
             $this->answers,
             fn ($a) => $a !== '' && $a !== null
         ));
-    }
-
-    #[On('timer-expired')]
-    public function handleTimerExpired(): void
-    {
-        if ($this->alreadySubmitted) {
-            return;
-        }
-
-        $this->timeExpired = true;
-        $this->submitLevel(forced: true);
     }
 
     public function saveAnswers(): void
@@ -223,7 +193,7 @@ class TakeTestComponent extends Component
         ]);
     }
 
-    public function submitLevel(bool $forced = false): void
+    public function submitLevel(): void
     {
         $application = $this->getApplication();
 
@@ -231,12 +201,7 @@ class TakeTestComponent extends Component
             return;
         }
 
-        if (! $forced && $this->isTimeLimitExceeded()) {
-            $this->timeExpired = true;
-            $forced = true;
-        }
-
-        if (! $forced && empty($this->answers)) {
+        if (empty($this->answers)) {
             $this->dispatch('notify', type: 'warning', message: __('Veuillez répondre à au moins une question.'));
             return;
         }

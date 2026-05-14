@@ -15,7 +15,6 @@ class ApplicationProgress extends Model
         'status',
         'current_level',
         'level_status',
-        'level_started_at',
         'main_score',
         'secondary_score',
         'apply_enabled',
@@ -29,7 +28,6 @@ class ApplicationProgress extends Model
         'is_archived'      => 'boolean',
         'main_score'       => 'decimal:2',
         'secondary_score'  => 'decimal:2',
-        'level_started_at' => 'datetime',
     ];
 
     public function candidate(): BelongsTo
@@ -60,25 +58,5 @@ class ApplicationProgress extends Model
     public function scopeForCandidate($query, int $candidateId)
     {
         return $query->where('candidate_id', $candidateId);
-    }
-
-    public function isTimeLimitExceeded(): bool
-    {
-        if (! $this->level_started_at || ! $this->test) {
-            return false;
-        }
-
-        $limit = $this->test->time_limit_per_level ?? null;
-
-        return $limit && now()->diffInSeconds($this->level_started_at) > $limit;
-    }
-
-    public function startLevel(int $level): void
-    {
-        $this->update([
-            'current_level'    => $level,
-            'level_status'     => 'in_progress',
-            'level_started_at' => now(),
-        ]);
     }
 }

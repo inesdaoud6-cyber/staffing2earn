@@ -15,20 +15,35 @@ use Filament\Pages\Page;
 class TakeTest extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-pencil-square';
+
     protected static string $view = 'filament.candidate.pages.take-test';
+
     protected static ?string $title = 'Passer le Test';
+
     protected static ?string $slug = 'take-test';
+
     protected static bool $shouldRegisterNavigation = false;
 
     public array $answers = [];
+
     public int $currentLevel = 1;
+
     public ?int $applicationId = null;
+
     public string $candidateName = '';
+
     public bool $hasTest = false;
+
     public bool $alreadySubmitted = false;
+
     public string $pageStatus = 'no_application';
+
     public int $totalQuestions = 0;
+
     public int $answeredCount = 0;
+
+    /** Unix timestamp for Alpine countdown (whole-test timer). */
+    public ?int $wholeTestExpiresAtUnix = null;
 
     public function mount(): void
     {
@@ -36,6 +51,7 @@ class TakeTest extends Page
 
         if (! $candidate) {
             $this->redirect('/candidate/dashboard');
+
             return;
         }
 
@@ -54,20 +70,23 @@ class TakeTest extends Page
         if (! $application) {
             $this->hasTest = false;
             $this->pageStatus = 'no_application';
+
             return;
         }
 
         $this->applicationId = $application->id;
-        $this->currentLevel  = $application->current_level;
-        $this->hasTest       = true;
+        $this->currentLevel = $application->current_level;
+        $this->hasTest = true;
 
         if ($application->status === 'pending') {
             $this->pageStatus = 'waiting_admin';
+
             return;
         }
 
         if ($application->status === 'validated') {
             $this->pageStatus = 'all_validated';
+
             return;
         }
 
@@ -84,16 +103,29 @@ class TakeTest extends Page
             foreach ($existing as $qr) {
                 $this->answers[$qr->question_id] = $qr->text_answer ?? $qr->obtained_score;
             }
-        } else {
-            $this->pageStatus = 'test';
-            $this->totalQuestions = $this->getQuestions()->count();
+
+            return;
         }
+
+        $this->pageStatus = 'test';
+        $application->loadMissing('test');
+        $application->ensureWholeTestSessionDeadline();
+        $application->refresh();
+
+        if ($application->wholeTestSessionExpired()) {
+            $this->finalizeWholeTestTimerExpired($application);
+
+            return;
+        }
+
+        $this->totalQuestions = $this->getQuestions()->count();
+        $this->syncWholeTestTimerUi();
     }
 
     public function getApplication(): ?ApplicationProgress
     {
         return $this->applicationId
-            ? ApplicationProgress::find($this->applicationId)
+            ? ApplicationProgress::with('test')->find($this->applicationId)
             : null;
     }
 
@@ -108,9 +140,9 @@ class TakeTest extends Page
         return Question::whereHas('tests', function ($q) use ($application) {
             $q->where('tests.id', $application->test_id);
         })
-        ->where('level', $this->currentLevel)
-        ->with('answers')
-        ->get();
+            ->where('level', $this->currentLevel)
+            ->with('answers')
+            ->get();
     }
 
     public function updatedAnswers(): void
@@ -121,7 +153,112 @@ class TakeTest extends Page
         ));
     }
 
-    public function saveAnswers(): void
+    /**
+     * Server-side safety net if the browser tab is backgrounded or JS stalls.
+     */
+    public function pollTestTimer(): void
+    {
+        if ($this->pageStatus !== 'test' || $this->alreadySubmitted) {
+            return;
+        }
+
+        $application = $this->getApplication()?->fresh();
+
+        if ($application?->wholeTestSessionExpired()) {
+            $this->handleTestTimeout();
+
+            return;
+        }
+    }
+
+    public function handleTestTimeout(): void
+    {
+        if ($this->pageStatus !== 'test' || $this->alreadySubmitted) {
+            return;
+        }
+
+        $application = $this->getApplication()?->fresh();
+
+        if (! $application || ! $application->test?->whole_test_timer_enabled) {
+            return;
+        }
+
+        if (! $application->wholeTestSessionExpired()) {
+            return;
+        }
+
+        $this->finalizeWholeTestTimerExpired($application);
+    }
+
+    private function finalizeWholeTestTimerExpired(ApplicationProgress $application): void
+    {
+        $application->refresh();
+
+        if ($application->level_status === 'awaiting_approval'
+            && Response::where('application_id', $application->id)
+                ->where('level', $this->currentLevel)
+                ->exists()) {
+            $this->alreadySubmitted = true;
+            $this->pageStatus = 'waiting_level_validation';
+            $this->wholeTestExpiresAtUnix = null;
+
+            return;
+        }
+
+        if ($this->alreadySubmitted) {
+            return;
+        }
+
+        $this->saveAnswers(false);
+
+        $application->refresh();
+        $application->update([
+            'status'       => 'in_progress',
+            'level_status' => 'awaiting_approval',
+        ]);
+
+        CandidateNotification::create([
+            'user_id'  => auth()->id(),
+            'type'     => 'warning',
+            'title'    => __('candidate.test_timer_expired_notification_title'),
+            'message'  => __('candidate.test_timer_expired_notification_body', ['level' => $this->currentLevel]),
+            'offre_id' => $application->offre_id,
+        ]);
+
+        $this->alreadySubmitted = true;
+        $this->pageStatus = 'waiting_level_validation';
+        $this->wholeTestExpiresAtUnix = null;
+
+        Notification::make()
+            ->title(__('candidate.test_timer_expired_title'))
+            ->body(__('candidate.test_timer_expired_body'))
+            ->warning()
+            ->persistent()
+            ->send();
+    }
+
+    private function syncWholeTestTimerUi(): void
+    {
+        $this->wholeTestExpiresAtUnix = null;
+
+        if ($this->pageStatus !== 'test' || $this->alreadySubmitted) {
+            return;
+        }
+
+        $app = $this->getApplication();
+
+        if (! $app?->test?->whole_test_timer_enabled || ! $app->test->whole_test_timer_minutes) {
+            return;
+        }
+
+        if (! $app->test_session_expires_at) {
+            return;
+        }
+
+        $this->wholeTestExpiresAtUnix = $app->test_session_expires_at->getTimestamp();
+    }
+
+    public function saveAnswers(bool $notifySuccess = true): void
     {
         $application = $this->getApplication();
 
@@ -134,11 +271,11 @@ class TakeTest extends Page
             'level'          => $this->currentLevel,
         ]);
 
-        $mainScore      = 0;
+        $mainScore = 0;
         $secondaryScore = 0;
 
         foreach ($this->answers as $questionId => $answer) {
-            $question  = Question::find($questionId);
+            $question = Question::find($questionId);
             $autoScore = 0;
 
             if ($question && $question->scorable) {
@@ -148,7 +285,7 @@ class TakeTest extends Page
                         ->first();
 
                     if ($correctAnswer && $correctAnswer->text === $answer) {
-                        $autoScore = $question->max_note ?? 0;
+                        $autoScore = (float) ($question->max_note ?? 0);
                     }
                 }
 
@@ -179,19 +316,21 @@ class TakeTest extends Page
         }
 
         $application->update([
-            'main_score'      => $mainScore,
-            'secondary_score' => $secondaryScore,
+            'main_score'      => round($mainScore, 2),
+            'secondary_score' => round($secondaryScore, 2),
         ]);
 
-        Notification::make()
-            ->title('Réponses sauvegardées !')
-            ->success()
-            ->send();
+        if ($notifySuccess) {
+            Notification::make()
+                ->title(__('candidate.answers_saved_title'))
+                ->success()
+                ->send();
+        }
     }
 
     public function submitLevel(): void
     {
-        $application = $this->getApplication();
+        $application = $this->getApplication()?->fresh();
 
         if (! $application) {
             return;
@@ -199,29 +338,35 @@ class TakeTest extends Page
 
         if (empty($this->answers)) {
             Notification::make()
-                ->title('Veuillez répondre à au moins une question.')
+                ->title(__('candidate.answer_at_least_one'))
                 ->warning()
                 ->send();
+
             return;
         }
 
-        $this->saveAnswers();
+        $this->saveAnswers(false);
 
-        $application->update(['status' => 'in_progress']);
+        $application->refresh();
+        $application->update([
+            'status'       => 'in_progress',
+            'level_status' => 'awaiting_approval',
+        ]);
 
         CandidateNotification::create([
-            'user_id' => auth()->id(),
-            'type'    => 'info',
-            'title'   => 'Niveau ' . $this->currentLevel . ' soumis',
-            'message' => 'Votre niveau ' . $this->currentLevel . ' a été soumis. En attente de validation par l\'administrateur.',
+            'user_id'  => auth()->id(),
+            'type'     => 'info',
+            'title'    => __('candidate.level_submitted_notification_title', ['level' => $this->currentLevel]),
+            'message'  => __('candidate.level_submitted_notification_body', ['level' => $this->currentLevel]),
             'offre_id' => $application->offre_id,
         ]);
 
         $this->alreadySubmitted = true;
         $this->pageStatus = 'waiting_level_validation';
+        $this->wholeTestExpiresAtUnix = null;
 
         Notification::make()
-            ->title('Niveau ' . $this->currentLevel . ' soumis avec succès !')
+            ->title(__('candidate.level_submitted_title', ['level' => $this->currentLevel]))
             ->success()
             ->send();
     }

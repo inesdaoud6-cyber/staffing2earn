@@ -1,6 +1,6 @@
 <div>
     {{-- Auto-save toutes les 30s en mode test --}}
-    @if($pageStatus === 'test')
+    @if($pageStatus === 'take_test')
     <div wire:poll.30000ms="autoSave" style="display:none;"></div>
     @endif
 

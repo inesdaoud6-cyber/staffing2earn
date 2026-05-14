@@ -44,7 +44,7 @@ integration/
 - **AuthController** : Utilise CandidateService pour éviter la duplication
 - **AdminPanelProvider** : Logo, favicon, menu item Espace Candidat, groups traduits
 - **CandidatePanelProvider** : Logo, favicon, menu items complets
-- **ApplicationProgress** : Méthode `isTimeLimitExceeded()` + `startLevel()`
+- **ApplicationProgress** : progression par niveau (`level_status`, etc.)
 - **Test** : Cast corrects + accesseur `time_limit_formatted`
 - **Temoignage** : `$table` explicite + cast `note` en integer
 - **routes/web.php** : Fusion des deux versions + routes propres

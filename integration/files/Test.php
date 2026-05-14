@@ -13,13 +13,11 @@ class Test extends Model
         'description',
         'eligibility_threshold',
         'talent_threshold',
-        'time_limit_per_level',
     ];
 
     protected $casts = [
         'eligibility_threshold' => 'decimal:2',
         'talent_threshold'      => 'decimal:2',
-        'time_limit_per_level'  => 'integer',
     ];
 
     public function offres(): HasMany
@@ -40,19 +38,5 @@ class Test extends Model
     public function applicationProgresses(): HasMany
     {
         return $this->hasMany(ApplicationProgress::class);
-    }
-
-    public function getTimeLimitFormattedAttribute(): ?string
-    {
-        if (! $this->time_limit_per_level) {
-            return null;
-        }
-
-        $minutes = intdiv($this->time_limit_per_level, 60);
-        $seconds = $this->time_limit_per_level % 60;
-
-        return $seconds > 0
-            ? "{$minutes}m {$seconds}s"
-            : "{$minutes}m";
     }
 }
