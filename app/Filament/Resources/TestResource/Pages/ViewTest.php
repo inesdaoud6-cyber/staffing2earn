@@ -17,7 +17,7 @@ class ViewTest extends ViewRecord
     {
         return [
             Actions\Action::make('manage_questions')
-                ->label('Gérer les questions')
+                ->label(__('test.manage-questions'))
                 ->icon('heroicon-o-question-mark-circle')
                 ->color('info')
                 ->url(fn () => TestResource::getUrl('questions', ['record' => $this->record])),

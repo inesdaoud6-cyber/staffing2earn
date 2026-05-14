@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Question extends Model
 {
@@ -32,9 +31,9 @@ class Question extends Model
 
     protected $casts = [
         'possible_answers' => 'array',
-        'obligatory'       => 'boolean',
-        'scorable'         => 'boolean',
-        'auto_evaluation'  => 'boolean',
+        'obligatory' => 'boolean',
+        'scorable' => 'boolean',
+        'auto_evaluation' => 'boolean',
     ];
 
     public function block(): BelongsTo
@@ -65,5 +64,36 @@ class Question extends Model
     public function questionResponses(): HasMany
     {
         return $this->hasMany(QuestionResponse::class);
+    }
+
+    /**
+     * Keep the answers table in sync with possible_answers + correct_answer so
+     * candidate auto-scoring (Answer::is_correct) continues to work.
+     */
+    public function syncAnswerRowsFromMcqOptions(): void
+    {
+        if (! in_array($this->component, ['radio', 'list'], true)) {
+            $this->answers()->delete();
+
+            return;
+        }
+
+        $this->answers()->delete();
+
+        $options = array_values(array_filter(
+            $this->possible_answers ?? [],
+            static fn ($t) => $t !== null && $t !== ''
+        ));
+
+        $correct = $this->correct_answer;
+
+        foreach ($options as $order => $text) {
+            Answer::create([
+                'question_id' => $this->id,
+                'text' => (string) $text,
+                'is_correct' => $correct !== null && (string) $correct === (string) $text,
+                'order' => $order,
+            ]);
+        }
     }
 }

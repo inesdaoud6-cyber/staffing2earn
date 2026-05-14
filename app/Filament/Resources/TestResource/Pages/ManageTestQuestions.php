@@ -18,6 +18,7 @@ use Illuminate\Support\Str;
 class ManageTestQuestions extends EditRecord
 {
     protected static string $resource = TestResource::class;
+
     protected static ?string $title = null;
 
     public function getTitle(): string
@@ -44,9 +45,11 @@ class ManageTestQuestions extends EditRecord
                         if ($groupId) {
                             $query->where('group_id', $groupId);
                         }
+
                         return $query->get()->mapWithKeys(function ($question) {
                             $group = $question->group?->name ?? '—';
-                            $label = "[{$group}] " . Str::limit($question->question_fr, 80);
+                            $label = "[{$group}] ".Str::limit($question->question_fr, 80);
+
                             return [$question->id => $label];
                         });
                     })

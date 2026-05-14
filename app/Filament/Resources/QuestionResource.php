@@ -7,7 +7,6 @@ use App\Models\Block;
 use App\Models\Group;
 use App\Models\Offre;
 use App\Models\Question;
-use App\Models\Test;
 use App\Services\TranslationService;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -18,8 +17,11 @@ use Filament\Tables\Table;
 class QuestionResource extends Resource
 {
     protected static ?string $model = Question::class;
+
     protected static ?string $navigationIcon = 'heroicon-o-question-mark-circle';
+
     protected static ?string $navigationGroup = 'Évaluations';
+
     protected static ?int $navigationSort = 2;
 
     public static function getNavigationLabel(): string
@@ -46,7 +48,7 @@ class QuestionResource extends Resource
                     ->required()
                     ->live(debounce: 1000)
                     ->afterStateUpdated(function ($state, callable $set) {
-                        if (!empty($state)) {
+                        if (! empty($state)) {
                             $translations = TranslationService::translateToAll($state);
                             $set('question_en', $translations['en']);
                             $set('question_ar', $translations['ar']);
@@ -86,9 +88,9 @@ class QuestionResource extends Resource
                     ->label(__('admin.answer_type'))
                     ->options([
                         'radio' => __('admin.radio'),
-                        'list'  => __('admin.list'),
-                        'text'  => __('admin.free_text'),
-                        'date'  => __('admin.date'),
+                        'list' => __('admin.list'),
+                        'text' => __('admin.free_text'),
+                        'date' => __('admin.date'),
                         'photo' => __('admin.photo'),
                     ])
                     ->required()
@@ -112,7 +114,7 @@ class QuestionResource extends Resource
                 Forms\Components\Select::make('classification')
                     ->label(__('admin.classification'))
                     ->options([
-                        'primary'   => __('admin.primary'),
+                        'primary' => __('admin.primary'),
                         'secondary' => __('admin.secondary_class'),
                     ])
                     ->required(),
@@ -202,14 +204,17 @@ class QuestionResource extends Resource
             ]);
     }
 
-    public static function getRelations(): array { return []; }
+    public static function getRelations(): array
+    {
+        return [];
+    }
 
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListQuestions::route('/'),
-            'create' => Pages\CreateQuestion::route('/create'),
-            'edit'   => Pages\EditQuestion::route('/{record}/edit'),
+            'index' => Pages\ListQuestions::route('/'),
+            'create' => Pages\CreateQuestionsForm::route('/create'),
+            'edit' => Pages\EditQuestion::route('/{record}/edit'),
         ];
     }
 }
