@@ -15,7 +15,6 @@ export default defineConfig({
                 'resources/css/candidate-application-space.css',
                 'resources/css/candidate-apropos.css',
                 'resources/css/candidate-choix.css',
-                'resources/css/candidate-dashboard.css',
                 'resources/css/admin-application-progress.css',
                 'resources/css/filament-shell.css',
                 'resources/css/candidate-notifications.css',

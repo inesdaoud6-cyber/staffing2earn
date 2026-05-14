@@ -402,3 +402,312 @@
 
 /* ---------- Misc: keep page content breathing ---------- */
 .fi-main { padding-top: 1rem; }
+
+/* ---------- Candidate dashboard (Filament page) ----------
+   Tailwind utilities used only in custom Blade are often NOT in the panel
+   bundle, which caused a near-white hero with white text. These rules fix
+   contrast and layout regardless of Tailwind safelist. ---------- */
+.candidate-dashboard {
+    width: 100%;
+    max-width: none;
+}
+
+.candidate-dashboard-hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    padding: 2rem 1.5rem;
+    color: #ffffff;
+    background: linear-gradient(135deg, #6d28d9 0%, #5b21b6 45%, #4c1d95 100%);
+    box-shadow: 0 12px 40px rgba(76, 29, 149, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.dark .candidate-dashboard-hero {
+    background: linear-gradient(135deg, #5b21b6 0%, #4c1d95 50%, #312e81 100%);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+@media (min-width: 640px) {
+    .candidate-dashboard-hero {
+        padding: 2.5rem 2rem;
+    }
+}
+
+.candidate-dashboard-hero__label {
+    margin: 0 0 0.25rem 0;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: rgba(237, 233, 254, 0.96);
+}
+
+.candidate-dashboard-hero__name {
+    margin: 0;
+    font-size: 1.625rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #ffffff;
+}
+
+@media (min-width: 640px) {
+    .candidate-dashboard-hero__name {
+        font-size: 1.875rem;
+    }
+}
+
+.candidate-dashboard-hero__tagline {
+    margin: 0.5rem 0 0 0;
+    max-width: 36rem;
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.92);
+}
+
+@media (min-width: 640px) {
+    .candidate-dashboard-hero__tagline {
+        font-size: 1rem;
+    }
+}
+
+.candidate-dashboard-hero__notif {
+    position: relative;
+    display: inline-flex;
+    height: 3rem;
+    width: 3rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    color: #ffffff;
+    text-decoration: none;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.candidate-dashboard-hero__notif:hover {
+    background: rgba(255, 255, 255, 0.26);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.candidate-dashboard-hero__notif svg {
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
+.candidate-dashboard-hero__badge {
+    position: absolute;
+    top: -0.25rem;
+    right: -0.25rem;
+    display: flex;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.25rem;
+    border-radius: 9999px;
+    background: #e11d48;
+    color: #ffffff;
+    font-size: 0.625rem;
+    font-weight: 700;
+    border: 2px solid #4c1d95;
+}
+
+.candidate-dashboard-stat {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.dark .candidate-dashboard-stat {
+    background: rgb(17 24 39);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.candidate-dashboard-stat__icon {
+    display: flex;
+    height: 3rem;
+    width: 3rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.75rem;
+}
+
+.candidate-dashboard-stat__icon--violet {
+    background: #f5f3ff;
+    color: #6d28d9;
+}
+
+.dark .candidate-dashboard-stat__icon--violet {
+    background: rgba(139, 92, 246, 0.15);
+    color: #c4b5fd;
+}
+
+.candidate-dashboard-stat__icon--amber {
+    background: #fffbeb;
+    color: #b45309;
+}
+
+.dark .candidate-dashboard-stat__icon--amber {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fcd34d;
+}
+
+.candidate-dashboard-stat__icon--emerald {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.dark .candidate-dashboard-stat__icon--emerald {
+    background: rgba(16, 185, 129, 0.15);
+    color: #6ee7b7;
+}
+
+.candidate-dashboard-stat__icon svg {
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
+.candidate-dashboard-stat__label {
+    margin: 0;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+}
+
+.dark .candidate-dashboard-stat__label {
+    color: #94a3b8;
+}
+
+.candidate-dashboard-stat__value {
+    margin: 0.125rem 0 0 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: #0f172a;
+}
+
+.dark .candidate-dashboard-stat__value {
+    color: #f8fafc;
+}
+
+.candidate-dashboard-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.75rem;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #ffffff !important;
+    text-decoration: none !important;
+    background: linear-gradient(180deg, #7c3aed 0%, #6d28d9 100%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 4px 14px rgba(109, 40, 217, 0.35);
+    transition: filter 0.15s ease, transform 0.15s ease;
+}
+
+.candidate-dashboard-btn-primary:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+}
+
+.candidate-dashboard-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.75rem;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #0f172a !important;
+    text-decoration: none !important;
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.candidate-dashboard-btn-secondary:hover {
+    border-color: rgba(109, 40, 217, 0.35);
+    background: #faf5ff;
+}
+
+.dark .candidate-dashboard-btn-secondary {
+    color: #f8fafc !important;
+    background: rgb(17 24 39);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.dark .candidate-dashboard-btn-secondary:hover {
+    background: rgba(109, 40, 217, 0.12);
+    border-color: rgba(196, 181, 253, 0.35);
+}
+
+.candidate-dashboard-hero-inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+@media (min-width: 640px) {
+    .candidate-dashboard-hero-inner {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+}
+
+.candidate-dashboard-stats-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+@media (min-width: 640px) {
+    .candidate-dashboard-stats-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+.candidate-dashboard-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.candidate-dashboard > * + * {
+    margin-top: 2rem;
+}
+
+.candidate-dashboard-hero-body {
+    min-width: 0;
+}
+
+.candidate-dashboard-btn-secondary svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+    color: #6d28d9;
+}
+
+.dark .candidate-dashboard-btn-secondary svg {
+    color: #c4b5fd;
+}
+
+.candidate-dashboard-btn-primary svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+}

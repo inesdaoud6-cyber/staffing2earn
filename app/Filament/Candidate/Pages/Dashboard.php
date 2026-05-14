@@ -22,7 +22,6 @@ class Dashboard extends Page
     public int $totalApplications = 0;
     public int $pendingApplications = 0;
     public int $completedApplications = 0;
-    public $recentApplications;
     public ?ApplicationProgress $activeApplication = null;
 
     public function mount(): void
@@ -40,7 +39,6 @@ class Dashboard extends Page
             $this->totalApplications     = $apps->count();
             $this->pendingApplications   = (clone $apps)->whereIn('status', ['pending', 'in_progress'])->count();
             $this->completedApplications = (clone $apps)->where('status', 'validated')->count();
-            $this->recentApplications    = (clone $apps)->with('offre')->latest()->take(5)->get();
 
             $this->activeApplication = ApplicationProgress::query()
                 ->where('candidate_id', $candidate->id)
@@ -49,17 +47,12 @@ class Dashboard extends Page
                 ->latest()
                 ->first();
         } else {
-            $this->recentApplications = collect();
+            $this->activeApplication = null;
         }
 
         $this->unreadCount = CandidateNotification::where('user_id', $user->id)
             ->where('is_read', false)
             ->count();
-    }
-
-    public function refreshData(): void
-    {
-        $this->mount();
     }
 
     protected function getHeaderActions(): array
