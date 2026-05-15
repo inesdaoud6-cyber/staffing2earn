@@ -31,13 +31,28 @@ Route::post('/candidate/logout', function () {
 })->name('filament.candidate.auth.logout');
 
 Route::get('/lang/{locale}', function (string $locale) {
-    if (in_array($locale, ['fr', 'en', 'ar'])) {
-        session(['locale' => $locale]);
-    }
-    // Use redirect()->back() with a fallback to home to avoid Livewire endpoint issues
     $referer = request()->headers->get('referer', url('/'));
-    return redirect($referer);
+    $response = redirect($referer);
+
+    if (in_array($locale, ['fr', 'en', 'ar'])) {
+        // Use a cookie — works across all middleware stacks (web + Filament panels)
+        $response->withCookie(cookie()->forever('locale', $locale, '/', null, false, false, false, 'lax'));
+    }
+
+    return $response;
 })->name('lang.switch');
+Route::get('/debug-locale', function () {
+    return response()->json([
+        'cookie_locale'   => request()->cookie('locale', 'NOT SET'),
+        'session_locale'  => session('locale', 'NOT SET'),
+        'app_locale'      => app()->getLocale(),
+        'config_locale'   => config('app.locale'),
+        'all_cookies'     => array_keys(request()->cookies->all()),
+        'test_trans'      => __('nav.workspace_management'),
+    ]);
+});
+
+
 
 Route::middleware('auth')->group(function () {
     Route::get('/email/verify', fn () => view('auth.verify-email'))

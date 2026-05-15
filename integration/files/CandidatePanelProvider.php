@@ -62,15 +62,15 @@ class CandidatePanelProvider extends PanelProvider
             ])
             ->userMenuItems([
                 MenuItem::make()
-                    ->label(fn () => __('Mon Profil'))
+                    ->label(fn () => __('My Profile'))
                     ->icon('heroicon-o-user-circle')
                     ->url(fn () => route('filament.candidate.pages.my-profile')),
                 MenuItem::make()
-                    ->label(fn () => __('Paramètres du Compte'))
+                    ->label(fn () => __('Account'))
                     ->icon('heroicon-o-cog-6-tooth')
                     ->url(fn () => route('filament.candidate.pages.account-settings')),
                 MenuItem::make()
-                    ->label(fn () => __('Panel Admin'))
+                    ->label(fn () => __('Admin Access'))
                     ->icon('heroicon-o-shield-check')
                     ->url(fn () => route('filament.admin.pages.dashboard'))
                     ->visible(fn () => auth()->check() && auth()->user()->hasRole('admin')),

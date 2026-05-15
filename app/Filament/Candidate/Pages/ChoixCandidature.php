@@ -15,10 +15,19 @@ class ChoixCandidature extends Page
 
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
     protected static string $view = 'filament.candidate.pages.choix-candidature';
-    protected static ?string $title = 'Choisir ma Candidature';
     protected static ?string $slug = 'choix-candidature';
     protected static ?int $navigationSort = 1;
     protected static ?string $navigationGroup = 'candidate.applications';
+
+    public function getTitle(): string
+    {
+        return __('Apply to an Offer');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Apply to an Offer');
+    }
 
     public $offres;
     public string $search = '';
