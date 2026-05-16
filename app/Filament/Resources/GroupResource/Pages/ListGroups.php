@@ -17,22 +17,10 @@ class ListGroups extends ListRecords
     #[Url(as: 'block')]
     public ?string $blockFilter = null;
 
-    #[Url(as: 'questions')]
-    public ?string $questionsCountFilter = null;
-
     public function updatedBlockFilter(): void
     {
         if ($this->blockFilter === '') {
             $this->blockFilter = null;
-        }
-
-        $this->resetPage();
-    }
-
-    public function updatedQuestionsCountFilter(): void
-    {
-        if ($this->questionsCountFilter === '') {
-            $this->questionsCountFilter = null;
         }
 
         $this->resetPage();
@@ -55,15 +43,6 @@ class ListGroups extends ListRecords
 
                 if (filled($this->blockFilter)) {
                     $query->where('block_id', (int) $this->blockFilter);
-                }
-
-                $range = $this->questionsCountFilter;
-                if (filled($range) && in_array($range, ['none', '1_5', '6_plus'], true)) {
-                    match ($range) {
-                        'none' => $query->having('questions_count', '=', 0),
-                        '1_5' => $query->havingBetween('questions_count', [1, 5]),
-                        '6_plus' => $query->having('questions_count', '>=', 6),
-                    };
                 }
 
                 return $query;

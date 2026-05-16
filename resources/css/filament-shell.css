@@ -790,13 +790,17 @@
     border-top-color: rgba(255, 255, 255, 0.1);
 }
 
-/* ---------- Groups list: hide default Filament filter / sort bars ---------- */
+/* ---------- Groups list: custom toolbar row (search + filter) ---------- */
 .fi-resource-groups .fi-ta-content > .flex.items-center.gap-x-6.bg-gray-50 {
     display: none !important;
 }
 
 .fi-resource-groups .fi-ta-filters-above-content-ctn,
-.fi-resource-groups .fi-ta-header-toolbar [aria-label*="filter" i],
 .fi-resource-groups .fi-ta-header-toolbar .fi-ta-filters-trigger {
+    display: none !important;
+}
+
+/* Hide duplicate Filament search bar; search lives in custom toolbar above the table */
+.fi-resource-groups .fi-ta-header-toolbar {
     display: none !important;
 }
