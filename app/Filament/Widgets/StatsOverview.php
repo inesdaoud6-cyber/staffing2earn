@@ -12,6 +12,8 @@ class StatsOverview extends BaseWidget
 {
     protected static ?int $sort = 1;
 
+    protected static ?int $sort = 1;
+
     protected function getStats(): array
     {
         $totalCandidates = Candidate::count();
@@ -22,8 +24,8 @@ class StatsOverview extends BaseWidget
         $totalOffers = Offre::count();
 
         return [
-            Stat::make('Total Candidats', $totalCandidates)
-                ->description('Comptes candidats enregistrés')
+            Stat::make(__('stats.total_candidates'), $totalCandidates)
+                ->description(__('stats.registered_accounts'))
                 ->descriptionIcon('heroicon-o-users')
                 ->color('primary'),
 
@@ -37,8 +39,8 @@ class StatsOverview extends BaseWidget
                 ->descriptionIcon('heroicon-o-briefcase')
                 ->color('success'),
 
-            Stat::make('Validés', $validatedCount)
-                ->description('candidatures validées')
+            Stat::make(__('stats.validated'), $validatedCount)
+                ->description(__('stats.validated_applications'))
                 ->descriptionIcon('heroicon-o-check-circle')
                 ->color('success'),
         ];

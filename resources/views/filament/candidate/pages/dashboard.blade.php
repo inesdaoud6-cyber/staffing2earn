@@ -7,7 +7,7 @@
                     <p class="candidate-dashboard-hero__label">{{ __('Welcome') }}</p>
                     <h1 class="candidate-dashboard-hero__name">{{ $userName }}</h1>
                     <p class="candidate-dashboard-hero__tagline">
-                        {{ __('This is your personal recruitment space.') }}
+                        {{ __('This is your personal recruitment space. Start your journey with us today.') }}
                     </p>
                 </div>
 

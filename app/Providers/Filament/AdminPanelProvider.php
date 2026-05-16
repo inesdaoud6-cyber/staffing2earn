@@ -5,6 +5,7 @@ namespace App\Providers\Filament;
 use App\Filament\Widgets\LatestApplications;
 use App\Filament\Widgets\StatsOverview;
 use App\Http\Middleware\AdminMiddleware;
+use App\Http\Middleware\SetLocale;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -57,7 +58,15 @@ class AdminPanelProvider extends PanelProvider
             )
             ->userMenuItems([
                 MenuItem::make()
-                    ->label(fn () => __('nav.candidate_space'))
+                    ->label(function () {
+                        $locale = request()->cookie('locale', config('app.locale', 'fr'));
+                        $labels = [
+                            'fr' => 'Espace candidat',
+                            'en' => 'Candidate Space',
+                            'ar' => 'مساحة المرشح',
+                        ];
+                        return $labels[$locale] ?? $labels['fr'];
+                    })
                     ->icon('heroicon-o-user-circle')
                     ->url(fn () => route('filament.candidate.pages.dashboard')),
             ])
@@ -96,6 +105,7 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
+                SetLocale::class,   // ← applique la locale depuis le cookie sur toutes les pages admin
             ])
             ->authMiddleware([
                 Authenticate::class,

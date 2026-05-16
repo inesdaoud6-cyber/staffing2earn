@@ -11,8 +11,17 @@ class Dashboard extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-home';
     protected static string $view = 'filament.candidate.pages.dashboard';
-    protected static ?string $title = 'Mon Espace';
     protected static ?string $slug = 'dashboard';
+
+    public function getTitle(): string
+    {
+        return __('nav.workspace_management');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('nav.workspace_management');
+    }
     protected static ?int $navigationSort = 1;
     protected static ?string $navigationGroup = 'candidate.workspace';
 
@@ -63,7 +72,7 @@ class Dashboard extends Page
 
         return [
             Action::make('backToAdmin')
-                ->label('Retour au panel admin')
+                ->label(__('Back to admin'))
                 ->icon('heroicon-o-arrow-left')
                 ->color('warning')
                 ->url('/admin'),

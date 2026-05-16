@@ -12,10 +12,19 @@ class APropos extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-information-circle';
     protected static string $view = 'filament.candidate.pages.a-propos';
-    protected static ?string $title = 'À Propos';
     protected static ?string $slug = 'a-propos';
     protected static ?int $navigationSort = 3;
     protected static ?string $navigationGroup = 'candidate.workspace';
+
+    public function getTitle(): string
+    {
+        return __('About Staffing2Earn');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('About Staffing2Earn');
+    }
 
     public $temoignages;
     public bool $hasApplied = false;

@@ -15,6 +15,11 @@ class LatestApplications extends BaseWidget
 
     protected int|string|array $columnSpan = 'full';
 
+    public static function getHeading(): string
+    {
+        return __('stats.latest_applications');
+    }
+
     public function table(Table $table): Table
     {
         return $table
@@ -27,27 +32,27 @@ class LatestApplications extends BaseWidget
             )
             ->columns([
                 TextColumn::make('candidate.full_name')
-                    ->label('Candidat')
+                    ->label(fn () => __('admin.application_column_applicant'))
                     ->getStateUsing(fn ($record) => $record->candidate?->full_name ?? $record->candidate?->user?->name ?? '—'),
                 TextColumn::make('offre.title')
-                    ->label('Offre')
-                    ->default('Candidature libre'),
+                    ->label(fn () => __('admin.associated_offer'))
+                    ->default(fn () => __('admin.free-application')),
                 TextColumn::make('status')
-                    ->label('Statut')
+                    ->label(fn () => __('Status'))
                     ->badge()
                     ->color(fn ($state) => match ($state) {
                         'validated' => 'success',
                         'rejected' => 'danger',
                         'in_progress' => 'info',
-                        default => 'warning',
+                        default      => 'warning',
                     }),
                 TextColumn::make('main_score')
-                    ->label('Score')
+                    ->label(fn () => __('Score'))
                     ->suffix('/100'),
                 TextColumn::make('current_level')
-                    ->label('Niveau'),
+                    ->label(fn () => __('Level')),
                 TextColumn::make('created_at')
-                    ->label('Date')
+                    ->label(fn () => __('Date'))
                     ->dateTime('d/m/Y H:i'),
             ]);
     }

@@ -16,8 +16,12 @@ class MyProfile extends Page
 
     protected static bool $shouldRegisterNavigation = false;
     protected static string $view = 'filament.candidate.pages.my-profile';
-    protected static ?string $title = 'Mon Profil';
     protected static ?string $slug = 'my-profile';
+
+    public function getTitle(): string
+    {
+        return __('My Profile');
+    }
 
     public $user;
     public $candidate;

@@ -31,11 +31,28 @@ Route::post('/candidate/logout', function () {
 })->name('filament.candidate.auth.logout');
 
 Route::get('/lang/{locale}', function (string $locale) {
+    $referer = request()->headers->get('referer', url('/'));
+    $response = redirect($referer);
+
     if (in_array($locale, ['fr', 'en', 'ar'])) {
-        session(['locale' => $locale]);
+        // Use a cookie — works across all middleware stacks (web + Filament panels)
+        $response->withCookie(cookie()->forever('locale', $locale, '/', null, false, false, false, 'lax'));
     }
-    return back();
+
+    return $response;
 })->name('lang.switch');
+Route::get('/debug-locale', function () {
+    return response()->json([
+        'cookie_locale'   => request()->cookie('locale', 'NOT SET'),
+        'session_locale'  => session('locale', 'NOT SET'),
+        'app_locale'      => app()->getLocale(),
+        'config_locale'   => config('app.locale'),
+        'all_cookies'     => array_keys(request()->cookies->all()),
+        'test_trans'      => __('nav.workspace_management'),
+    ]);
+});
+
+
 
 Route::middleware('auth')->group(function () {
     Route::get('/email/verify', fn () => view('auth.verify-email'))

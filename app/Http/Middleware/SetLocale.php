@@ -10,7 +10,8 @@ class SetLocale
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $locale = session('locale', config('app.locale', 'fr'));
+        // Read locale from cookie (works across all middleware stacks including Filament)
+        $locale = $request->cookie('locale', config('app.locale', 'fr'));
 
         if (in_array($locale, ['fr', 'en', 'ar'])) {
             app()->setLocale($locale);
