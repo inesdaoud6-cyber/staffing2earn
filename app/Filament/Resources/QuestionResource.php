@@ -165,6 +165,8 @@ class QuestionResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultPaginationPageOption(12)
+            ->paginationPageOptions([12, 24, 48])
             ->contentGrid([
                 'md' => 2,
                 'xl' => 3,
