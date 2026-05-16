@@ -80,6 +80,7 @@ class AdminNotificationBell extends Component
         $notif = AdminNotification::query()
             ->where('id', $id)
             ->where('user_id', auth()->id())
+            ->with('applicationProgress')
             ->first();
 
         if (! $notif) {
@@ -90,7 +91,7 @@ class AdminNotificationBell extends Component
             $notif->update(['is_read' => true]);
         }
 
-        return $this->redirect(route('filament.admin.pages.admin-notifications'));
+        return $this->redirect($notif->url);
     }
 
     public function render()

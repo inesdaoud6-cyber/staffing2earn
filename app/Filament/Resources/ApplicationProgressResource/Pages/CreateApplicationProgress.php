@@ -11,6 +11,6 @@ class CreateApplicationProgress extends CreateRecord
 
     protected function getRedirectUrl(): string
     {
-        return $this->getResource()::getUrl('view', ['record' => $this->record]);
+        return ApplicationProgressResource::reviewUrlFor($this->record);
     }
 }

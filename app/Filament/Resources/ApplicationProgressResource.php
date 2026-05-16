@@ -29,6 +29,7 @@ use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn\TextColumnSize;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 class ApplicationProgressResource extends Resource
 {
@@ -99,6 +100,39 @@ class ApplicationProgressResource extends Resource
     {
         return parent::getEloquentQuery()
             ->where('status', '!=', 'cancelled');
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return false;
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return false;
+    }
+
+    public static function reviewUrlFor(ApplicationProgress $record): string
+    {
+        if ($record->status === 'pending') {
+            return static::getUrl('review_level', ['record' => $record, 'level' => 1]);
+        }
+
+        if ($record->isAwaitingTestAssignment()) {
+            return static::getUrl('review_level', ['record' => $record, 'level' => 1]);
+        }
+
+        if ($record->level_status === 'awaiting_approval') {
+            return static::getUrl('review_level', [
+                'record' => $record,
+                'level' => max(1, (int) $record->current_level),
+            ]);
+        }
+
+        return static::getUrl('review_level', [
+            'record' => $record,
+            'level' => max(1, (int) $record->current_level),
+        ]);
     }
 
     public static function form(Form $form): Form
@@ -178,19 +212,7 @@ class ApplicationProgressResource extends Resource
         );
 
         return $table
-            ->recordUrl(function (ApplicationProgress $record): string {
-                if ($record->status === 'pending') {
-                    return static::getUrl('review_level', ['record' => $record, 'level' => 1]);
-                }
-                if ($record->isAwaitingTestAssignment()) {
-                    return static::getUrl('review_level', ['record' => $record, 'level' => 1]);
-                }
-                if ($record->level_status === 'awaiting_approval') {
-                    return static::getUrl('review_level', ['record' => $record, 'level' => $record->current_level]);
-                }
-
-                return static::getUrl('edit', ['record' => $record]);
-            })
+            ->recordUrl(fn (ApplicationProgress $record): string => static::reviewUrlFor($record))
             ->filters(self::applicationProgressTableFilters())
             ->actions(self::applicationProgressTableActions())
             ->bulkActions([]);
@@ -668,13 +690,7 @@ class ApplicationProgressResource extends Resource
             $maxLevel = min(20, max(1, $maxFromOffer, $maxFromResponses));
         }
 
-        $items = [
-            NavigationItem::make('application-details')
-                ->label(__('admin.application_subnav_details'))
-                ->icon('heroicon-o-adjustments-horizontal')
-                ->url(static::getUrl('edit', ['record' => $record]))
-                ->isActiveWhen(fn (): bool => $page instanceof Pages\EditApplicationProgress),
-        ];
+        $items = [];
 
         $responseLevels = $record->responses()->pluck('level')->map(fn ($l) => (int) $l)->all();
 

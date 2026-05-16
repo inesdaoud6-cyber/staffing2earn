@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Filament\Resources\ApplicationProgressResource;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -42,9 +43,13 @@ class AdminNotification extends Model
     public function getUrlAttribute(): string
     {
         if ($this->application_progress_id) {
-            return route('filament.admin.resources.application-progresses.edit', [
-                'record' => $this->application_progress_id,
-            ]);
+            $application = $this->relationLoaded('applicationProgress')
+                ? $this->applicationProgress
+                : ApplicationProgress::query()->find($this->application_progress_id);
+
+            if ($application) {
+                return ApplicationProgressResource::reviewUrlFor($application);
+            }
         }
 
         return route('filament.admin.pages.admin-notifications');
