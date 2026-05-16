@@ -12,8 +12,28 @@ class OfferApplicationRanking
      */
     public static function ranksForOffer(int $offreId): array
     {
-        $orderedIds = ApplicationProgress::query()
-            ->where('offre_id', $offreId)
+        return self::ranksFromQuery(
+            ApplicationProgress::query()->where('offre_id', $offreId)
+        );
+    }
+
+    /**
+     * @return array<int, int> application id => rank (1 = highest score)
+     */
+    public static function ranksForFreeApplications(): array
+    {
+        return self::ranksFromQuery(
+            ApplicationProgress::query()->whereNull('offre_id')
+        );
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<ApplicationProgress>  $query
+     * @return array<int, int>
+     */
+    private static function ranksFromQuery($query): array
+    {
+        $orderedIds = $query
             ->where('status', '!=', 'cancelled')
             ->orderByRaw('COALESCE(main_score, 0) DESC')
             ->orderBy('id')

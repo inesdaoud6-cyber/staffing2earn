@@ -32,21 +32,29 @@ class ViewOfferCandidate extends Page
         $this->offre = (string) $offre;
         $this->record = (int) $record;
 
-        if (! ctype_digit($this->offre) || ! Offre::whereKey((int) $this->offre)->exists()) {
-            abort(404);
+        if ($this->offre !== 'libre') {
+            if (! ctype_digit($this->offre) || ! Offre::whereKey((int) $this->offre)->exists()) {
+                abort(404);
+            }
         }
 
         $this->candidate = Candidate::with('user')->findOrFail($this->record);
 
-        $this->application = ApplicationProgress::query()
-            ->where('offre_id', (int) $this->offre)
+        $applicationQuery = ApplicationProgress::query()
             ->where('candidate_id', $this->record)
             ->where('status', '!=', 'cancelled')
             ->with([
                 'responses' => fn ($q) => $q->orderBy('level'),
                 'offre',
-            ])
-            ->firstOrFail();
+            ]);
+
+        if ($this->offre === 'libre') {
+            $applicationQuery->whereNull('offre_id');
+        } else {
+            $applicationQuery->where('offre_id', (int) $this->offre);
+        }
+
+        $this->application = $applicationQuery->firstOrFail();
     }
 
     public function getTitle(): string|Htmlable
@@ -65,7 +73,9 @@ class ViewOfferCandidate extends Page
             return null;
         }
 
-        $ranks = OfferApplicationRanking::ranksForOffer((int) $this->offre);
+        $ranks = $this->offre === 'libre'
+            ? OfferApplicationRanking::ranksForFreeApplications()
+            : OfferApplicationRanking::ranksForOffer((int) $this->offre);
 
         return $ranks[$this->application->id] ?? null;
     }

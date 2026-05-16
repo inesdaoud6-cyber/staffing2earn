@@ -32,13 +32,19 @@ class ListOfferCandidates extends Page implements HasTable
     {
         $this->offre = (string) (request()->route('offre') ?? '');
         $this->assertOffreRouteIsValid();
-        $this->rankByApplicationId = OfferApplicationRanking::ranksForOffer((int) $this->offre);
+        $this->rankByApplicationId = $this->isFreeApplications()
+            ? OfferApplicationRanking::ranksForFreeApplications()
+            : OfferApplicationRanking::ranksForOffer((int) $this->offre);
         $this->initializeTableLayout();
         $this->mountInteractsWithTable();
     }
 
     public function getTitle(): string|Htmlable
     {
+        if ($this->isFreeApplications()) {
+            return __('admin.application_title_free_applications').' — '.__('nav.candidates');
+        }
+
         $offre = Offre::find((int) $this->offre);
 
         return $offre
@@ -48,29 +54,44 @@ class ListOfferCandidates extends Page implements HasTable
 
     public function getBreadcrumb(): ?string
     {
+        if ($this->isFreeApplications()) {
+            return __('admin.application_title_free_applications');
+        }
+
         return Offre::find((int) $this->offre)?->title;
     }
 
     public function table(Table $table): Table
     {
-        $offreId = (int) $this->offre;
+        $query = ApplicationProgress::query()
+            ->where('status', '!=', 'cancelled')
+            ->with(['candidate.user'])
+            ->orderByRaw('COALESCE(main_score, 0) DESC')
+            ->orderBy('id');
+
+        if ($this->isFreeApplications()) {
+            $query->whereNull('offre_id');
+        } else {
+            $query->where('offre_id', (int) $this->offre);
+        }
 
         return CandidateResource::configureOfferApplicantsTable(
             $table
-                ->query(
-                    ApplicationProgress::query()
-                        ->where('offre_id', $offreId)
-                        ->where('status', '!=', 'cancelled')
-                        ->with(['candidate.user'])
-                        ->orderByRaw('COALESCE(main_score, 0) DESC')
-                        ->orderBy('id')
-                )
+                ->query($query)
                 ->recordUrl(fn (ApplicationProgress $record): string => CandidateResource::getUrl('view', [
                     'offre' => $this->offre,
                     'record' => $record->candidate_id,
                 ]))
-                ->emptyStateHeading(__('admin.candidate_none_for_offer'))
-                ->emptyStateDescription(__('admin.candidate_none_for_offer_desc'))
+                ->emptyStateHeading(
+                    $this->isFreeApplications()
+                        ? __('admin.candidate_none_free_applications')
+                        : __('admin.candidate_none_for_offer')
+                )
+                ->emptyStateDescription(
+                    $this->isFreeApplications()
+                        ? __('admin.candidate_none_free_applications_desc')
+                        : __('admin.candidate_none_for_offer_desc')
+                )
                 ->paginated([10, 25, 50]),
             $this->tableLayout,
             $this->rankByApplicationId,
@@ -88,15 +109,24 @@ class ListOfferCandidates extends Page implements HasTable
         ]);
     }
 
+    private function isFreeApplications(): bool
+    {
+        return $this->offre === 'libre';
+    }
+
     private function assertOffreRouteIsValid(): void
     {
         $key = (string) ($this->offre ?? '');
 
-        if ($key === '' || ! ctype_digit($key)) {
+        if ($key === '') {
             abort(404);
         }
 
-        if (! Offre::whereKey((int) $key)->exists()) {
+        if ($key === 'libre') {
+            return;
+        }
+
+        if (! ctype_digit($key) || ! Offre::whereKey((int) $key)->exists()) {
             abort(404);
         }
     }

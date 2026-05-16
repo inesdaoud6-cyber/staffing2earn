@@ -165,6 +165,73 @@
     color: rgb(124, 58, 237);
 }
 
+/* Candidate management hub: free applications row above offers table */
+.candidate-hub-free-entry {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    text-decoration: none;
+    color: inherit;
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.candidate-hub-free-entry--list {
+    border-radius: 0.5rem;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(255, 255, 255, 0.98);
+    padding: 0.875rem 1.125rem;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.candidate-hub-free-entry--card {
+    border-radius: 0.75rem;
+    border: 1px solid rgba(139, 92, 246, 0.28);
+    background: linear-gradient(135deg, rgba(237, 233, 254, 0.95) 0%, rgba(255, 255, 255, 0.98) 55%);
+    padding: 1rem 1.125rem;
+    box-shadow: 0 4px 14px rgba(91, 33, 182, 0.08);
+}
+
+.dark .candidate-hub-free-entry--list {
+    border-color: rgba(71, 85, 105, 0.55);
+    background: rgba(30, 41, 59, 0.94);
+}
+
+.dark .candidate-hub-free-entry--card {
+    border-color: rgba(139, 92, 246, 0.35);
+    background: linear-gradient(135deg, rgba(46, 16, 101, 0.55) 0%, rgba(15, 23, 42, 0.98) 60%);
+}
+
+.candidate-hub-free-entry:hover {
+    border-color: rgba(139, 92, 246, 0.45);
+    box-shadow: 0 6px 18px rgba(91, 33, 182, 0.12);
+}
+
+.candidate-hub-free-entry__title {
+    flex: 1 1 auto;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: rgb(76, 29, 149);
+}
+
+.dark .candidate-hub-free-entry__title {
+    color: rgb(196, 181, 253);
+}
+
+.candidate-hub-free-entry__meta {
+    font-size: 0.875rem;
+    color: rgb(100, 116, 139);
+}
+
+.candidate-hub-free-entry__icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+    color: rgb(109, 40, 217);
+}
+
 /* Candidate detail: full-height CV preview */
 .candidate-cv-preview {
     margin-top: 1rem;

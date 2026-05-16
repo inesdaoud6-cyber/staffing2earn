@@ -5,6 +5,7 @@ namespace App\Filament\Resources\CandidateResource\Pages;
 use App\Filament\Concerns\InteractsWithTableLayout;
 use App\Filament\Resources\CandidateResource;
 use App\Filament\Resources\OffreResource;
+use App\Models\ApplicationProgress;
 use App\Models\Offre;
 use Filament\Resources\Pages\Page;
 use Filament\Tables;
@@ -30,6 +31,19 @@ class BrowseJobOffers extends Page implements HasTable
     public function getTitle(): string|Htmlable
     {
         return __('nav.candidates_management');
+    }
+
+    public function getFreeApplicationsCount(): int
+    {
+        return ApplicationProgress::query()
+            ->whereNull('offre_id')
+            ->where('status', '!=', 'cancelled')
+            ->count();
+    }
+
+    public function getFreeApplicationsUrl(): string
+    {
+        return CandidateResource::getUrl('by_offer', ['offre' => 'libre']);
     }
 
     public function table(Table $table): Table
