@@ -38,16 +38,52 @@ class TestScoringService
 
     public function percentForCorrectQuestion(Question $question): float
     {
-        $base = max(0, (float) ($question->max_note ?? 0));
-        $bonus = max(0, (float) ($question->second_ratio ?? 0));
-
-        return min(100.0, round($base + $bonus, 2));
+        return $this->maxPointsForQuestion($question);
     }
 
     /**
+     * Max points this question can contribute to the test total (out of 100).
+     */
+    public function maxPointsForQuestion(Question $question): float
+    {
+        $base = max(0, (float) ($question->max_note ?? 0));
+        $bonus = max(0, (float) ($question->second_ratio ?? 0));
+        $max = $base + $bonus;
+
+        return $max > 0 ? min(100.0, round($max, 2)) : 100.0;
+    }
+
+    /**
+     * Convert an admin-entered 0–100 % (performance on this question) to test points.
+     */
+    public function pointsFromManualPercent(Question $question, float $manualPercent): float
+    {
+        $max = $this->maxPointsForQuestion($question);
+        $percent = min(100.0, max(0.0, $manualPercent));
+
+        return min($max, round(($percent / 100.0) * $max, 2));
+    }
+
+    /**
+     * Express stored test points as a 0–100 % for the admin manual score field.
+     */
+    public function manualPercentFromPoints(Question $question, float $points): float
+    {
+        $max = $this->maxPointsForQuestion($question);
+
+        if ($max <= 0) {
+            return min(100.0, max(0.0, round($points, 2)));
+        }
+
+        return min(100.0, max(0.0, round(($points / $max) * 100.0, 2)));
+    }
+
+    /**
+     * Test total = sum of per-question points (each question worth up to max_note + bonus).
+     *
      * @param  Collection<int, Question>  $questions
      */
-    public function averageTestScorePercent(Collection $questions, Collection $questionResponsesByQuestionId): float
+    public function totalTestScorePercent(Collection $questions, Collection $questionResponsesByQuestionId): float
     {
         $scorable = $questions->where('scorable', true);
 
@@ -64,7 +100,17 @@ class TestScoringService
                 : 0.0;
         }
 
-        return round($total / $scorable->count(), 2);
+        return min(100.0, round($total, 2));
+    }
+
+    /**
+     * @param  Collection<int, Question>  $questions
+     *
+     * @deprecated Use totalTestScorePercent()
+     */
+    public function averageTestScorePercent(Collection $questions, Collection $questionResponsesByQuestionId): float
+    {
+        return $this->totalTestScorePercent($questions, $questionResponsesByQuestionId);
     }
 
     /**
@@ -100,7 +146,7 @@ class TestScoringService
 
         $questionResponses = $response->questionResponses()->get()->keyBy('question_id');
 
-        $testScore = $this->averageTestScorePercent($questions, $questionResponses);
+        $testScore = $this->totalTestScorePercent($questions, $questionResponses);
         $result = $this->evaluateThresholds($test, $testScore);
 
         $response->update([

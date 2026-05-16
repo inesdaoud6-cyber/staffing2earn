@@ -142,8 +142,10 @@ class ReviewApplicationLevel extends Page implements HasForms
                                     ->columnSpanFull(),
                                 Forms\Components\TextInput::make('auto_score')
                                     ->label(__('admin.application_review_auto_score'))
-                                    ->suffix('%')
+                                    ->suffix(__('admin.application_review_score_points_suffix'))
                                     ->disabled()
+                                    ->dehydrated(true),
+                                Forms\Components\Hidden::make('question_max_points')
                                     ->dehydrated(true),
                                 Forms\Components\TextInput::make('manual_score')
                                     ->label(__('admin.application_review_manual_score'))
@@ -154,8 +156,12 @@ class ReviewApplicationLevel extends Page implements HasForms
                                     ->suffix('%')
                                     ->placeholder(__('admin.application_review_manual_placeholder'))
                                     ->helperText(fn (Forms\Get $get): string => $get('needs_manual')
-                                        ? __('admin.manual_score_open_hint')
-                                        : __('admin.manual_score_override_hint')),
+                                        ? __('admin.manual_score_open_hint', [
+                                            'max' => $get('question_max_points') ?? '—',
+                                        ])
+                                        : __('admin.manual_score_override_hint', [
+                                            'max' => $get('question_max_points') ?? '—',
+                                        ])),
                             ])
                             ->columns(2)
                             ->defaultItems(0)
@@ -294,6 +300,17 @@ class ReviewApplicationLevel extends Page implements HasForms
             $label = (string) ($q->{$field} ?? $q->question_en ?? $q->question_fr ?? '');
             $needsManual = $qr && ! $scoring->isAutoScorableComponent($q->component);
 
+            $maxPoints = $scoring->maxPointsForQuestion($q);
+            $manualPercent = null;
+
+            if ($qr) {
+                if ($qr->manual_score > 0) {
+                    $manualPercent = (float) $qr->manual_score;
+                } elseif ((float) ($qr->obtained_score ?? 0) > 0 && $needsManual) {
+                    $manualPercent = $scoring->manualPercentFromPoints($q, (float) $qr->obtained_score);
+                }
+            }
+
             $items[] = [
                 'question_response_id' => $qr?->id,
                 'needs_manual' => $needsManual,
@@ -301,8 +318,11 @@ class ReviewApplicationLevel extends Page implements HasForms
                 'answer_preview' => $qr
                     ? $this->formatAnswerPreview($qr)
                     : __('admin.application_review_no_answer'),
-                'auto_score' => $qr ? (string) $qr->auto_score : '',
-                'manual_score' => $qr && $qr->manual_score > 0 ? $qr->manual_score : null,
+                'auto_score' => $qr
+                    ? number_format((float) $qr->auto_score, 2, '.', '')
+                    : '',
+                'question_max_points' => number_format($maxPoints, 2, '.', ''),
+                'manual_score' => $manualPercent,
             ];
         }
 
@@ -323,20 +343,24 @@ class ReviewApplicationLevel extends Page implements HasForms
                 continue;
             }
 
-            $qr = QuestionResponse::query()->find($id);
+            $qr = QuestionResponse::query()->with('question')->find($id);
             if (! $qr) {
                 continue;
             }
 
+            $question = $qr->question;
+            $scoring = app(TestScoringService::class);
             $manualRaw = $row['manual_score'] ?? null;
             $useManual = $manualRaw !== null && $manualRaw !== '';
-            $manual = $useManual ? min(100, max(0, (float) $manualRaw)) : 0.0;
+            $manualPercent = $useManual ? min(100, max(0, (float) $manualRaw)) : 0.0;
             $auto = (float) $qr->auto_score;
-            $obtained = $useManual ? $manual : $auto;
+            $obtained = $useManual && $question
+                ? $scoring->pointsFromManualPercent($question, $manualPercent)
+                : $auto;
 
             $qr->update([
-                'manual_score' => $useManual ? $manual : 0.0,
-                'obtained_score' => min(100, round($obtained, 2)),
+                'manual_score' => $useManual ? $manualPercent : 0.0,
+                'obtained_score' => round($obtained, 2),
             ]);
         }
 
