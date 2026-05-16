@@ -10,6 +10,8 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class StatsOverview extends BaseWidget
 {
+    protected static ?int $sort = 1;
+
     protected function getStats(): array
     {
         $totalCandidates   = Candidate::count();
@@ -20,23 +22,23 @@ class StatsOverview extends BaseWidget
         $totalOffers       = Offre::count();
 
         return [
-            Stat::make('Total Candidats', $totalCandidates)
-                ->description('Comptes candidats enregistrés')
+            Stat::make(__('stats.total_candidates'), $totalCandidates)
+                ->description(__('stats.registered_accounts'))
                 ->descriptionIcon('heroicon-o-users')
                 ->color('primary'),
 
-            Stat::make('Candidatures', $totalApplications)
-                ->description($pendingCount . ' en attente')
+            Stat::make(__('stats.applications'), $totalApplications)
+                ->description($pendingCount . ' ' . __('stats.pending'))
                 ->descriptionIcon('heroicon-o-clock')
                 ->color('warning'),
 
-            Stat::make('Offres Publiées', $publishedOffers)
-                ->description('sur ' . $totalOffers . ' offres totales')
+            Stat::make(__('stats.published_offers'), $publishedOffers)
+                ->description(__('stats.out_of') . ' ' . $totalOffers . ' ' . __('stats.total_offers'))
                 ->descriptionIcon('heroicon-o-briefcase')
                 ->color('success'),
 
-            Stat::make('Validés', $validatedCount)
-                ->description('candidatures validées')
+            Stat::make(__('stats.validated'), $validatedCount)
+                ->description(__('stats.validated_applications'))
                 ->descriptionIcon('heroicon-o-check-circle')
                 ->color('success'),
         ];
