@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\OffreResource\Pages;
 
 use App\Filament\Resources\OffreResource;
-use Filament\Resources\Pages\CreateRecord;
+use App\Filament\Resources\Pages\CreateRecord;
 
 class CreateOffre extends CreateRecord
 {

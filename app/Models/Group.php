@@ -10,7 +10,7 @@ class Group extends Model
 {
     protected $table = 'question_groups';
 
-    protected $fillable = ['block_id', 'name', 'order'];
+    protected $fillable = ['block_id', 'name', 'description', 'order'];
 
     public function block(): BelongsTo
     {

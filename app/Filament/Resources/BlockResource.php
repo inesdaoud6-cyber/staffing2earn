@@ -24,8 +24,14 @@ class BlockResource extends Resource
     public static function form(Form $form): Form
     {
         return $form->schema([
-            Forms\Components\TextInput::make('name')->required()->maxLength(255),
-            Forms\Components\TextInput::make('order')->required()->numeric()->default(0),
+            Forms\Components\TextInput::make('name')
+                ->label(__('admin.block_name'))
+                ->required()
+                ->maxLength(255),
+            Forms\Components\Textarea::make('description')
+                ->label(__('admin.description'))
+                ->rows(3)
+                ->columnSpanFull(),
         ]);
     }
 
@@ -38,26 +44,24 @@ class BlockResource extends Resource
             ])
             ->columns([
                 Tables\Columns\Layout\Stack::make([
-                    Tables\Columns\Layout\Split::make([
-                        Tables\Columns\TextColumn::make('name')
-                            ->label('Name')
-                            ->searchable()
-                            ->weight('bold'),
-                        Tables\Columns\TextColumn::make('order')
-                            ->label('Order')
-                            ->badge()
-                            ->color('gray')
-                            ->sortable(),
-                    ]),
+                    Tables\Columns\TextColumn::make('name')
+                        ->label(__('admin.block_name'))
+                        ->searchable()
+                        ->weight('bold'),
+                    Tables\Columns\TextColumn::make('description')
+                        ->label(__('admin.description'))
+                        ->limit(80)
+                        ->color('gray')
+                        ->size('sm'),
                     Tables\Columns\TextColumn::make('created_at')
                         ->label('Created At')
                         ->dateTime()
-                        ->sortable()
                         ->color('gray')
                         ->size('sm'),
                 ])->space(1),
             ])
-            ->defaultSort('order')
+            ->defaultSort('name')
+            ->filters([])
             ->actions([
                 Tables\Actions\EditAction::make()->label('Modifier'),
                 Tables\Actions\DeleteAction::make()->label('Supprimer'),

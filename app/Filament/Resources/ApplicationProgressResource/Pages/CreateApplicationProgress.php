@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\ApplicationProgressResource\Pages;
 
 use App\Filament\Resources\ApplicationProgressResource;
-use Filament\Resources\Pages\CreateRecord;
+use App\Filament\Resources\Pages\CreateRecord;
 
 class CreateApplicationProgress extends CreateRecord
 {

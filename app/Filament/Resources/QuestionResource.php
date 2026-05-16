@@ -5,8 +5,8 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\QuestionResource\Pages;
 use App\Models\Block;
 use App\Models\Group;
-use App\Models\Offre;
 use App\Models\Question;
+use App\Support\QuestionFormOptions;
 use App\Services\TranslationService;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -92,33 +92,23 @@ class QuestionResource extends Resource
                     ->searchable()
                     ->nullable()
                     ->disabled(fn (Get $get): bool => ! filled($get('block_id'))),
-                Forms\Components\Select::make('offre_id')
-                    ->label(__('admin.associated_offer'))
-                    ->options(Offre::where('is_published', true)->pluck('title', 'id'))
-                    ->searchable()
-                    ->nullable()
-                    ->placeholder(__('admin.no_offer')),
-            ])->columns(3),
+            ])->columns(2),
 
             Forms\Components\Section::make(__('admin.configuration'))->schema([
                 Forms\Components\Select::make('component')
                     ->label(__('admin.answer_type'))
-                    ->options([
-                        'radio' => __('admin.radio'),
-                        'list' => __('admin.list'),
-                        'text' => __('admin.free_text'),
-                        'date' => __('admin.date'),
-                        'photo' => __('admin.photo'),
-                    ])
+                    ->options(QuestionFormOptions::componentOptions())
                     ->required()
                     ->live(),
 
                 Forms\Components\TagsInput::make('possible_answers')
                     ->label(__('admin.possible_answers'))
                     ->placeholder(__('admin.add_answer'))
-                    ->visible(fn ($get) => in_array($get('component'), ['radio', 'list']))
+                    ->visible(fn (Get $get): bool => QuestionFormOptions::isMcqComponent($get('component')))
                     ->live()
-                    ->helperText(__('admin.press_enter')),
+                    ->helperText(fn (Get $get): ?string => QuestionFormOptions::isMultipleChoiceComponent($get('component'))
+                        ? __('admin.possible_answers_qcm_hint')
+                        : __('admin.press_enter')),
 
                 Forms\Components\TextInput::make('level')
                     ->label(__('Level'))
@@ -144,10 +134,19 @@ class QuestionResource extends Resource
                     ->live(),
 
                 Forms\Components\Select::make('correct_answer')
-                    ->label(__('admin.correct_answer_select'))
-                    ->options(fn ($get) => collect($get('possible_answers') ?? [])->mapWithKeys(fn ($a) => [$a => $a]))
-                    ->visible(fn ($get) => (bool) $get('auto_evaluation') && in_array($get('component'), ['radio', 'list']))
+                    ->label(__('admin.correct_answer_select_qcu'))
+                    ->options(fn (Get $get): array => collect($get('possible_answers') ?? [])->mapWithKeys(fn ($a) => [$a => $a])->all())
+                    ->visible(fn (Get $get): bool => (bool) $get('auto_evaluation')
+                        && QuestionFormOptions::isSingleChoiceComponent($get('component')))
                     ->searchable()
+                    ->nullable(),
+
+                Forms\Components\CheckboxList::make('correct_answers')
+                    ->label(__('admin.correct_answers_select_qcm'))
+                    ->options(fn (Get $get): array => collect($get('possible_answers') ?? [])->mapWithKeys(fn ($a) => [$a => $a])->all())
+                    ->visible(fn (Get $get): bool => (bool) $get('auto_evaluation')
+                        && QuestionFormOptions::isMultipleChoiceComponent($get('component')))
+                    ->columns(2)
                     ->nullable(),
 
                 Forms\Components\TextInput::make('correct_answer')
@@ -183,6 +182,7 @@ class QuestionResource extends Resource
                     Tables\Columns\Layout\Split::make([
                         Tables\Columns\TextColumn::make('component')
                             ->label(__('admin.type'))
+                            ->formatStateUsing(fn (string $state): string => QuestionFormOptions::componentOptions()[$state] ?? $state)
                             ->badge()
                             ->color('info'),
                         Tables\Columns\TextColumn::make('level')

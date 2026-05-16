@@ -4,17 +4,21 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ApplicationProgressResource\Pages;
 use App\Models\ApplicationProgress;
+use App\Models\Candidate;
 use App\Models\CandidateNotification;
 use App\Models\Offre;
+use App\Models\Response;
+use App\Models\Test;
+use App\Services\FreeApplicationWorkflow;
 use Closure;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\HtmlString;
 use Filament\Forms;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Filament\Navigation\NavigationItem;
 use Filament\Notifications\Notification;
+use Filament\Resources\Pages\Page as FilamentResourcePage;
 use Filament\Resources\Resource;
 use Filament\Support\Enums\FontWeight;
 use Filament\Tables;
@@ -23,6 +27,7 @@ use Filament\Tables\Columns\Layout\Split;
 use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn\TextColumnSize;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class ApplicationProgressResource extends Resource
 {
@@ -49,6 +54,46 @@ class ApplicationProgressResource extends Resource
         return __('admin.applications');
     }
 
+    public static function getNavigationItems(): array
+    {
+        $awaitingFree = static::countFreeApplicationsAwaitingReview();
+
+        return [
+            NavigationItem::make(static::getNavigationLabel())
+                ->group(static::getNavigationGroup())
+                ->icon(static::getNavigationIcon())
+                ->activeIcon(static::getActiveNavigationIcon())
+                ->isActiveWhen(fn (): bool => request()->routeIs(static::getRouteBaseName().'.index')
+                    || request()->routeIs(static::getRouteBaseName().'.by_offer'))
+                ->badge(static::countJobApplicationsAwaitingReview() ?: null)
+                ->sort(static::getNavigationSort())
+                ->url(static::getUrl('index')),
+            NavigationItem::make(__('admin.application_nav_free'))
+                ->group(static::getNavigationGroup())
+                ->icon('heroicon-o-inbox')
+                ->isActiveWhen(fn (): bool => request()->routeIs(static::getRouteBaseName().'.free'))
+                ->badge($awaitingFree > 0 ? (string) $awaitingFree : null)
+                ->sort(static::getNavigationSort() + 1)
+                ->url(static::getUrl('free')),
+        ];
+    }
+
+    public static function countFreeApplicationsAwaitingReview(): int
+    {
+        return (int) static::getEloquentQuery()
+            ->whereNull('offre_id')
+            ->where('level_status', 'awaiting_approval')
+            ->count();
+    }
+
+    public static function countJobApplicationsAwaitingReview(): int
+    {
+        return (int) static::getEloquentQuery()
+            ->whereNotNull('offre_id')
+            ->where('level_status', 'awaiting_approval')
+            ->count();
+    }
+
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
@@ -58,73 +103,53 @@ class ApplicationProgressResource extends Resource
     public static function form(Form $form): Form
     {
         return $form->schema([
-            Forms\Components\Section::make(__('admin.application_cv_section'))
-                ->description(__('admin.application_cv_section_hint'))
-                ->schema([
-                    Forms\Components\Placeholder::make('cv_review')
-                        ->label(__('admin.application_cv'))
-                        ->content(function (?ApplicationProgress $record): HtmlString {
-                            if (! $record) {
-                                return new HtmlString('');
-                            }
-                            $url = $record->cvPublicUrl();
-                            if (! $url) {
-                                return new HtmlString(
-                                    '<p class="text-sm text-gray-500 dark:text-gray-400">' . e(__('admin.application_no_cv')) . '</p>'
-                                );
-                            }
-
-                            return new HtmlString(
-                                '<a href="' . e($url) . '" target="_blank" rel="noopener noreferrer" '
-                                . 'class="fi-btn relative grid-flow-col items-center justify-center font-semibold outline-none transition duration-75 focus-visible:ring-2 rounded-lg fi-btn-color-primary fi-btn-variant outlined fi-size-md gap-1.5 px-3 py-2 text-sm inline-flex">'
-                                . e(__('admin.application_view_cv_open'))
-                                . '</a>'
-                            );
-                        })
-                        ->visibleOn('edit'),
-                ])
-                ->columns(1)
-                ->visibleOn('edit'),
-            Forms\Components\Section::make(__('admin.application_section_info'))->schema([
-                Forms\Components\Select::make('candidate_id')
+            Section::make(__('admin.application_review_pages_hint_title'))
+                ->description(__('admin.application_review_pages_hint_body'))
+                ->visibleOn('edit')
+                ->collapsible()
+                ->collapsed(),
+            Section::make(__('admin.application_section_info'))->schema([
+                Select::make('candidate_id')
                     ->label(__('nav.candidate'))
                     ->options(
-                        \App\Models\Candidate::with('user')
+                        Candidate::with('user')
                             ->get()
-                            ->mapWithKeys(fn ($c) => [$c->id => ($c->full_name ?? $c->user?->name) . ' (' . $c->user?->email . ')'])
+                            ->mapWithKeys(fn ($c) => [$c->id => ($c->full_name ?? $c->user?->name).' ('.$c->user?->email.')'])
                     )
                     ->searchable()
                     ->required(),
-                Forms\Components\Select::make('offre_id')
+                Select::make('offre_id')
                     ->label(__('nav.job_offer'))
                     ->options(Offre::pluck('title', 'id'))
                     ->searchable()
                     ->placeholder(__('Open application')),
-                Forms\Components\Select::make('test_id')
+                Select::make('test_id')
                     ->label(__('admin.application_associated_test'))
                     ->relationship('test', 'name')
                     ->searchable()
                     ->preload()
-                    ->helperText(__('admin.application_associated_test_hint')),
-                Forms\Components\Select::make('status')
+                    ->helperText(fn (?ApplicationProgress $record): string => $record?->isFreeApplication()
+                        ? __('admin.application_associated_test_hint_free')
+                        : __('admin.application_associated_test_hint')),
+                Select::make('status')
                     ->label(__('Status'))
                     ->options([
-                        'pending'     => __('Pending'),
+                        'pending' => __('Pending'),
                         'in_progress' => __('In Progress'),
-                        'validated'   => __('Validated'),
-                        'rejected'    => __('Rejected'),
-                        'cancelled'   => __('Cancelled'),
+                        'validated' => __('Validated'),
+                        'rejected' => __('Rejected'),
+                        'cancelled' => __('Cancelled'),
                     ])
                     ->required(),
-                Forms\Components\TextInput::make('current_level')
+                TextInput::make('current_level')
                     ->label(__('Level'))
                     ->numeric()
                     ->default(1),
-                Forms\Components\TextInput::make('main_score')
+                TextInput::make('main_score')
                     ->label(__('admin.primary_score'))
                     ->numeric()
                     ->default(0),
-                Forms\Components\TextInput::make('secondary_score')
+                TextInput::make('secondary_score')
                     ->label(__('admin.secondary_score'))
                     ->numeric()
                     ->default(0),
@@ -141,7 +166,7 @@ class ApplicationProgressResource extends Resource
         return self::configureTable($table, 'list');
     }
 
-    public static function configureTable(Table $table, string $layout = 'list'): Table
+    public static function configureTable(Table $table, string $layout = 'list', bool $hideOfferColumn = false): Table
     {
         $layout = in_array($layout, ['list', 'cards'], true) ? $layout : 'list';
 
@@ -154,15 +179,27 @@ class ApplicationProgressResource extends Resource
                     'md' => 2,
                     'xl' => 3,
                 ])
-                ->columns(self::applicationProgressCardColumns());
+                ->columns(self::applicationProgressCardColumns($hideOfferColumn));
         } else {
             $table
                 ->striped()
-                ->columns(self::applicationProgressListColumns());
+                ->columns(self::applicationProgressListColumns($hideOfferColumn));
         }
 
         return $table
-            ->recordUrl(fn (ApplicationProgress $record): string => static::getUrl('edit', ['record' => $record]))
+            ->recordUrl(function (ApplicationProgress $record): string {
+                if ($record->status === 'pending') {
+                    return static::getUrl('review_level', ['record' => $record, 'level' => 1]);
+                }
+                if ($record->isAwaitingTestAssignment()) {
+                    return static::getUrl('review_level', ['record' => $record, 'level' => 1]);
+                }
+                if ($record->level_status === 'awaiting_approval') {
+                    return static::getUrl('review_level', ['record' => $record, 'level' => $record->current_level]);
+                }
+
+                return static::getUrl('edit', ['record' => $record]);
+            })
             ->filters(self::applicationProgressTableFilters())
             ->actions(self::applicationProgressTableActions())
             ->bulkActions([]);
@@ -171,42 +208,72 @@ class ApplicationProgressResource extends Resource
     /**
      * @return array<int, Tables\Columns\Column>
      */
-    private static function applicationProgressListColumns(): array
+    private static function applicationProgressListColumns(bool $hideOfferColumn = false): array
     {
-        return [
+        $columns = [
             Tables\Columns\TextColumn::make('candidate.user.name')
                 ->label(__('admin.application_column_applicant'))
                 ->description(fn (ApplicationProgress $record): ?string => $record->candidate?->user?->email)
                 ->searchable(query: self::applicantSearchQuery())
                 ->sortable(),
-            Tables\Columns\TextColumn::make('offre.title')
+        ];
+
+        if (! $hideOfferColumn) {
+            $columns[] = Tables\Columns\TextColumn::make('offre.title')
                 ->label(__('admin.application_column_offer'))
                 ->placeholder(__('Open application'))
                 ->searchable()
                 ->limit(36)
-                ->tooltip(fn (ApplicationProgress $record): ?string => $record->offre?->title),
+                ->tooltip(fn (ApplicationProgress $record): ?string => $record->offre?->title);
+        } else {
+            $columns[] = Tables\Columns\TextColumn::make('test.name')
+                ->label(__('admin.application_associated_test'))
+                ->placeholder('—')
+                ->limit(32)
+                ->toggleable();
+        }
+
+        return [
+            ...$columns,
             Tables\Columns\TextColumn::make('status')
                 ->label(__('Status'))
                 ->badge()
                 ->formatStateUsing(fn ($state) => match ($state) {
-                    'pending'     => __('Pending'),
+                    'pending' => __('Pending'),
                     'in_progress' => __('In Progress'),
-                    'validated'   => __('Validated'),
-                    'rejected'    => __('Rejected'),
-                    'cancelled'   => __('Cancelled'),
-                    default       => (string) $state,
+                    'validated' => __('Validated'),
+                    'rejected' => __('Rejected'),
+                    'cancelled' => __('Cancelled'),
+                    default => (string) $state,
                 })
                 ->color(fn ($state) => match ($state) {
-                    'validated'   => 'success',
-                    'rejected'    => 'danger',
-                    'cancelled'   => 'gray',
+                    'validated' => 'success',
+                    'rejected' => 'danger',
+                    'cancelled' => 'gray',
                     'in_progress' => 'info',
-                    default       => 'warning',
+                    default => 'warning',
                 }),
             Tables\Columns\TextColumn::make('current_level')
                 ->label(__('Level'))
                 ->alignCenter()
                 ->sortable(),
+            Tables\Columns\TextColumn::make('level_status')
+                ->label(__('admin.application_column_level_status'))
+                ->badge()
+                ->formatStateUsing(fn ($state) => match ($state) {
+                    'in_progress' => __('admin.level_status_in_progress'),
+                    'awaiting_approval' => __('admin.level_status_awaiting_approval'),
+                    'approved' => __('admin.level_status_approved'),
+                    'rejected' => __('admin.level_status_rejected'),
+                    default => $state ? (string) $state : '—',
+                })
+                ->color(fn ($state) => match ($state) {
+                    'awaiting_approval' => 'warning',
+                    'approved' => 'success',
+                    'rejected' => 'danger',
+                    default => 'gray',
+                })
+                ->toggleable(isToggledHiddenByDefault: false),
             Tables\Columns\TextColumn::make('main_score')
                 ->label(__('Score'))
                 ->suffix('/100')
@@ -227,8 +294,26 @@ class ApplicationProgressResource extends Resource
     /**
      * @return array<int, Stack>
      */
-    private static function applicationProgressCardColumns(): array
+    private static function applicationProgressCardColumns(bool $hideOfferColumn = false): array
     {
+        $contextColumns = $hideOfferColumn
+            ? [
+                Tables\Columns\TextColumn::make('test.name')
+                    ->label(__('admin.application_associated_test'))
+                    ->placeholder('—')
+                    ->weight(FontWeight::Medium)
+                    ->limit(48),
+            ]
+            : [
+                Tables\Columns\TextColumn::make('offre.title')
+                    ->label(__('admin.application_column_offer'))
+                    ->placeholder(__('Open application'))
+                    ->searchable()
+                    ->weight(FontWeight::Medium)
+                    ->limit(48)
+                    ->tooltip(fn (ApplicationProgress $record): ?string => $record->offre?->title),
+            ];
+
         return [
             Stack::make([
                 Split::make([
@@ -250,31 +335,25 @@ class ApplicationProgressResource extends Resource
                     ->size(TextColumnSize::Small)
                     ->color('gray')
                     ->copyable(),
-                Tables\Columns\TextColumn::make('offre.title')
-                    ->label(__('admin.application_column_offer'))
-                    ->placeholder(__('Open application'))
-                    ->searchable()
-                    ->weight(FontWeight::Medium)
-                    ->limit(48)
-                    ->tooltip(fn (ApplicationProgress $record): ?string => $record->offre?->title),
+                ...$contextColumns,
                 Split::make([
                     Tables\Columns\TextColumn::make('status')
                         ->label(__('Status'))
                         ->badge()
                         ->formatStateUsing(fn ($state) => match ($state) {
-                            'pending'     => __('Pending'),
+                            'pending' => __('Pending'),
                             'in_progress' => __('In Progress'),
-                            'validated'   => __('Validated'),
-                            'rejected'    => __('Rejected'),
-                            'cancelled'   => __('Cancelled'),
-                            default       => (string) $state,
+                            'validated' => __('Validated'),
+                            'rejected' => __('Rejected'),
+                            'cancelled' => __('Cancelled'),
+                            default => (string) $state,
                         })
                         ->color(fn ($state) => match ($state) {
-                            'validated'   => 'success',
-                            'rejected'    => 'danger',
-                            'cancelled'   => 'gray',
+                            'validated' => 'success',
+                            'rejected' => 'danger',
+                            'cancelled' => 'gray',
                             'in_progress' => 'info',
-                            default       => 'warning',
+                            default => 'warning',
                         }),
                     Tables\Columns\TextColumn::make('current_level')
                         ->label(__('admin.application_column_level_short'))
@@ -282,6 +361,23 @@ class ApplicationProgressResource extends Resource
                         ->color('gray')
                         ->alignEnd(),
                 ]),
+                Tables\Columns\TextColumn::make('level_status')
+                    ->label(__('admin.application_column_level_status'))
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        'in_progress' => __('admin.level_status_in_progress'),
+                        'awaiting_approval' => __('admin.level_status_awaiting_approval'),
+                        'approved' => __('admin.level_status_approved'),
+                        'rejected' => __('admin.level_status_rejected'),
+                        default => $state ? (string) $state : '—',
+                    })
+                    ->color(fn ($state) => match ($state) {
+                        'awaiting_approval' => 'warning',
+                        'approved' => 'success',
+                        'rejected' => 'danger',
+                        default => 'gray',
+                    })
+                    ->size(TextColumnSize::ExtraSmall),
                 Split::make([
                     Tables\Columns\TextColumn::make('main_score')
                         ->label(__('Score'))
@@ -320,19 +416,32 @@ class ApplicationProgressResource extends Resource
             Tables\Filters\SelectFilter::make('status')
                 ->label(__('Status'))
                 ->options([
-                    'pending'     => __('Pending'),
+                    'pending' => __('Pending'),
                     'in_progress' => __('In Progress'),
-                    'validated'   => __('Validated'),
-                    'rejected'    => __('Rejected'),
+                    'validated' => __('Validated'),
+                    'rejected' => __('Rejected'),
                 ]),
             Tables\Filters\SelectFilter::make('offre_id')
                 ->label(__('nav.job_offer'))
                 ->options(Offre::pluck('title', 'id')),
+            Tables\Filters\SelectFilter::make('current_level')
+                ->label(__('Level'))
+                ->options(fn (): array => collect(range(1, 20))
+                    ->mapWithKeys(fn (int $n) => [$n => (string) $n])
+                    ->all()),
+            Tables\Filters\SelectFilter::make('level_status')
+                ->label(__('admin.application_column_level_status'))
+                ->options([
+                    'in_progress' => __('admin.level_status_in_progress'),
+                    'awaiting_approval' => __('admin.level_status_awaiting_approval'),
+                    'approved' => __('admin.level_status_approved'),
+                    'rejected' => __('admin.level_status_rejected'),
+                ]),
         ];
     }
 
     /**
-     * @return array<int, Tables\Actions\Action|Tables\Actions\ActionGroup>
+     * @return array<int, Tables\Actions\Action|ActionGroup>
      */
     private static function applicationProgressTableActions(): array
     {
@@ -341,6 +450,38 @@ class ApplicationProgressResource extends Resource
                 ->label(__('Edit'))
                 ->iconButton(),
             ActionGroup::make([
+                Tables\Actions\Action::make('assign_test_free')
+                    ->label(__('admin.free_application_assign_test'))
+                    ->icon('heroicon-o-clipboard-document-list')
+                    ->color('primary')
+                    ->form([
+                        Forms\Components\Select::make('test_id')
+                            ->label(__('admin.application_associated_test'))
+                            ->options(fn (): array => Test::query()->orderBy('name')->pluck('name', 'id')->all())
+                            ->searchable()
+                            ->preload()
+                            ->required(),
+                    ])
+                    ->action(function (ApplicationProgress $record, array $data): void {
+                        FreeApplicationWorkflow::assignTest($record, (int) $data['test_id']);
+                    })
+                    ->visible(fn (ApplicationProgress $record): bool => $record->isAwaitingTestAssignment()
+                        || ($record->isFreeApplication()
+                            && $record->status === 'in_progress'
+                            && $record->level_status === 'awaiting_approval')),
+                Tables\Actions\Action::make('validate_profile_free')
+                    ->label(__('admin.free_application_validate_profile'))
+                    ->icon('heroicon-o-check-badge')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading(__('admin.free_application_validate_profile_heading'))
+                    ->modalDescription(__('admin.free_application_validate_profile_description'))
+                    ->action(function (ApplicationProgress $record): void {
+                        FreeApplicationWorkflow::validateProfile($record);
+                    })
+                    ->visible(fn (ApplicationProgress $record): bool => $record->isFreeApplication()
+                        && $record->status === 'in_progress'
+                        && $record->level_status === 'awaiting_approval'),
                 Tables\Actions\Action::make('valider_niveau')
                     ->label(__('admin.application_action_validate_level'))
                     ->icon('heroicon-o-arrow-up-circle')
@@ -349,36 +490,9 @@ class ApplicationProgressResource extends Resource
                     ->modalHeading(__('admin.application_action_validate_level_heading'))
                     ->modalDescription(__('admin.application_action_validate_level_description'))
                     ->action(function (ApplicationProgress $record) {
-                        $newLevel = $record->current_level + 1;
-                        $oldLevel = $record->current_level;
-                        $payload = [
-                            'current_level' => $newLevel,
-                            'status'        => 'in_progress',
-                        ];
-                        $nextTestId = $record->offre?->testIdForLevel($newLevel);
-                        if ($nextTestId !== null) {
-                            $payload['test_id'] = $nextTestId;
-                        }
-                        $record->update($payload);
-                        CandidateNotification::create([
-                            'user_id'  => $record->candidate->user_id,
-                            'type'     => 'info',
-                            'title'    => __('admin.candidate_notif_level_validated_title'),
-                            'message'  => __('admin.candidate_notif_level_validated_body', [
-                                'old' => (string) $oldLevel,
-                                'new' => (string) $newLevel,
-                            ]),
-                            'offre_id' => $record->offre_id,
-                        ]);
-                        Notification::make()
-                            ->title(__('admin.application_toast_level_advanced', [
-                                'old' => (string) $oldLevel,
-                                'new' => (string) $newLevel,
-                            ]))
-                            ->success()
-                            ->send();
+                        static::advanceToNextLevel($record);
                     })
-                    ->visible(fn (ApplicationProgress $record) => $record->status === 'in_progress'),
+                    ->visible(fn (ApplicationProgress $record) => $record->status === 'in_progress' && ! $record->isFreeApplication()),
                 Tables\Actions\Action::make('valider_finale')
                     ->label(__('admin.application_action_validate_final'))
                     ->icon('heroicon-o-check-badge')
@@ -386,12 +500,18 @@ class ApplicationProgressResource extends Resource
                     ->requiresConfirmation()
                     ->modalHeading(__('admin.application_action_validate_final_heading'))
                     ->action(function (ApplicationProgress $record) {
+                        if ($record->isFreeApplication()) {
+                            FreeApplicationWorkflow::validateProfile($record);
+
+                            return;
+                        }
+
                         $record->update(['status' => 'validated']);
                         CandidateNotification::create([
-                            'user_id'  => $record->candidate->user_id,
-                            'type'     => 'validated',
-                            'title'    => __('admin.candidate_notif_validated_title'),
-                            'message'  => $record->offre
+                            'user_id' => $record->candidate->user_id,
+                            'type' => 'validated',
+                            'title' => __('admin.candidate_notif_validated_title'),
+                            'message' => $record->offre
                                 ? __('admin.candidate_notif_validated_body_with_offer', ['offer' => $record->offre->title])
                                 : __('admin.candidate_notif_validated_body_open'),
                             'offre_id' => $record->offre_id,
@@ -401,7 +521,7 @@ class ApplicationProgressResource extends Resource
                             ->success()
                             ->send();
                     })
-                    ->visible(fn (ApplicationProgress $record) => $record->status === 'in_progress'),
+                    ->visible(fn (ApplicationProgress $record) => $record->status === 'in_progress' && ! $record->isFreeApplication()),
                 Tables\Actions\Action::make('rejeter')
                     ->label(__('admin.application_action_reject'))
                     ->icon('heroicon-o-x-circle')
@@ -411,10 +531,10 @@ class ApplicationProgressResource extends Resource
                     ->action(function (ApplicationProgress $record) {
                         $record->update(['status' => 'rejected']);
                         CandidateNotification::create([
-                            'user_id'  => $record->candidate->user_id,
-                            'type'     => 'rejected',
-                            'title'    => __('admin.candidate_notif_rejected_title'),
-                            'message'  => $record->offre
+                            'user_id' => $record->candidate->user_id,
+                            'type' => 'rejected',
+                            'title' => __('admin.candidate_notif_rejected_title'),
+                            'message' => $record->offre
                                 ? __('admin.candidate_notif_rejected_body_with_offer', ['offer' => $record->offre->title])
                                 : __('admin.candidate_notif_rejected_body_open'),
                             'offre_id' => $record->offre_id,
@@ -431,18 +551,7 @@ class ApplicationProgressResource extends Resource
                     ->color('warning')
                     ->requiresConfirmation()
                     ->action(function (ApplicationProgress $record) {
-                        $record->update(['score_published' => true]);
-                        CandidateNotification::create([
-                            'user_id'  => $record->candidate->user_id,
-                            'type'     => 'info',
-                            'title'    => __('admin.candidate_notif_score_title'),
-                            'message'  => __('admin.candidate_notif_score_body', ['score' => (string) $record->main_score]),
-                            'offre_id' => $record->offre_id,
-                        ]);
-                        Notification::make()
-                            ->title(__('admin.application_toast_score_published'))
-                            ->success()
-                            ->send();
+                        static::publishScoreForRecord($record);
                     })
                     ->visible(fn (ApplicationProgress $record) => ! $record->score_published),
             ])
@@ -457,9 +566,161 @@ class ApplicationProgressResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListApplicationProgress::route('/'),
+            'index' => Pages\BrowseApplicationOffers::route('/'),
+            'free' => Pages\ListFreeApplications::route('/free'),
+            'by_offer' => Pages\ListApplicationProgress::route('/offre/{offre}'),
             'create' => Pages\CreateApplicationProgress::route('/create'),
-            'edit'   => Pages\EditApplicationProgress::route('/{record}/edit'),
+            'review_level' => Pages\ReviewApplicationLevel::route('/{record}/review/{level}'),
+            'edit' => Pages\EditApplicationProgress::route('/{record}/edit'),
         ];
+    }
+
+    public static function advanceToNextLevel(ApplicationProgress $record): void
+    {
+        $record->refresh();
+        $oldLevel = $record->current_level;
+        $newLevel = $oldLevel + 1;
+        $payload = [
+            'current_level' => $newLevel,
+            'status' => 'in_progress',
+            'level_status' => 'in_progress',
+            'score_published' => false,
+            'test_session_expires_at' => null,
+        ];
+        $nextTestId = $record->offre?->testIdForLevel($newLevel);
+        if ($nextTestId !== null) {
+            $payload['test_id'] = $nextTestId;
+        }
+        $record->update($payload);
+        $record->loadMissing('candidate.user', 'offre');
+        CandidateNotification::create([
+            'user_id' => $record->candidate->user_id,
+            'type' => 'info',
+            'title' => __('admin.candidate_notif_level_validated_title'),
+            'message' => __('admin.candidate_notif_level_validated_body', [
+                'old' => (string) $oldLevel,
+                'new' => (string) $newLevel,
+            ]),
+            'offre_id' => $record->offre_id,
+        ]);
+        Notification::make()
+            ->title(__('admin.application_toast_level_advanced', [
+                'old' => (string) $oldLevel,
+                'new' => (string) $newLevel,
+            ]))
+            ->success()
+            ->send();
+    }
+
+    public static function recalculateScoresForResponse(ApplicationProgress $application, int $responseLevel): void
+    {
+        $response = Response::query()
+            ->where('application_id', $application->id)
+            ->where('level', $responseLevel)
+            ->first();
+
+        if (! $response) {
+            return;
+        }
+
+        $main = 0.0;
+        $secondary = 0.0;
+
+        foreach ($response->questionResponses()->with('question')->get() as $qr) {
+            $question = $qr->question;
+            if (! $question || ! $question->scorable) {
+                continue;
+            }
+
+            $score = (float) ($qr->obtained_score ?? $qr->auto_score ?? 0);
+
+            if ($question->classification === 'primary') {
+                $main += $score;
+            } else {
+                $secondary += $score;
+            }
+        }
+
+        $application->update([
+            'main_score' => round($main, 2),
+            'secondary_score' => round($secondary, 2),
+        ]);
+    }
+
+    public static function publishScoreForRecord(ApplicationProgress $record, ?int $responseLevel = null): void
+    {
+        $record->loadMissing('candidate.user', 'offre');
+
+        $level = $responseLevel ?? (int) ($record->responses()->max('level') ?? $record->current_level);
+        static::recalculateScoresForResponse($record, $level);
+        $record->refresh();
+
+        $record->update(['score_published' => true]);
+        CandidateNotification::create([
+            'user_id' => $record->candidate->user_id,
+            'type' => 'info',
+            'title' => __('admin.candidate_notif_score_title'),
+            'message' => __('admin.candidate_notif_score_body', ['score' => (string) $record->main_score]),
+            'offre_id' => $record->offre_id,
+        ]);
+        Notification::make()
+            ->title(__('admin.application_toast_score_published'))
+            ->success()
+            ->send();
+    }
+
+    public static function getRecordSubNavigation(FilamentResourcePage $page): array
+    {
+        if (! method_exists($page, 'getRecord')) {
+            return [];
+        }
+
+        $record = $page->getRecord();
+        if (! $record instanceof ApplicationProgress) {
+            return [];
+        }
+
+        if ($record->isFreeApplication()) {
+            $maxLevel = min(20, max(
+                1,
+                (int) ($record->responses()->max('level') ?? 0),
+                (int) $record->current_level
+            ));
+        } else {
+            $maxFromOffer = (int) ($record->offre?->levels_count ?? 1);
+            $maxFromResponses = (int) ($record->responses()->max('level') ?? 1);
+            $maxLevel = min(20, max(1, $maxFromOffer, $maxFromResponses));
+        }
+
+        $items = [
+            NavigationItem::make('application-details')
+                ->label(__('admin.application_subnav_details'))
+                ->icon('heroicon-o-adjustments-horizontal')
+                ->url(static::getUrl('edit', ['record' => $record]))
+                ->isActiveWhen(fn (): bool => $page instanceof Pages\EditApplicationProgress),
+        ];
+
+        $responseLevels = $record->responses()->pluck('level')->map(fn ($l) => (int) $l)->all();
+
+        for ($level = 1; $level <= $maxLevel; $level++) {
+            $lv = $level;
+            $hasResponse = in_array($lv, $responseLevels, true);
+            $label = $lv === 1 && ! $hasResponse
+                ? __('admin.application_review_nav_level_1')
+                : ($hasResponse
+                    ? __('admin.application_review_nav_level_test', ['n' => (string) $lv])
+                    : __('admin.application_review_nav_level_n', ['n' => $lv]));
+
+            $items[] = NavigationItem::make('review-'.$lv)
+                ->label($label)
+                ->icon('heroicon-o-clipboard-document-check')
+                ->url(static::getUrl('review_level', ['record' => $record, 'level' => $lv]))
+                ->isActiveWhen(function () use ($page, $lv): bool {
+                    return $page instanceof Pages\ReviewApplicationLevel
+                        && $page->reviewLevel === $lv;
+                });
+        }
+
+        return $items;
     }
 }

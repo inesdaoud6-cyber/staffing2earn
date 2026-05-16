@@ -2,8 +2,6 @@
     @vite('resources/css/candidate-choix.css')
 
     <script>
-        // When the candidate lands here from a notification (URL hash `#offre-ID`),
-        // scroll the card into view and pulse it so the right offer is obvious.
         document.addEventListener('DOMContentLoaded', () => {
             const hash = window.location.hash;
             if (!hash || !hash.startsWith('#offre-')) return;
@@ -24,72 +22,217 @@
     </div>
     @endcan
 
-    <div class="cc-grid">
-        <div class="cc-card">
-            <div class="cc-icon cc-icon-blue">📋</div>
-            <div class="cc-title">{{ __('Free Application') }}</div>
-            <div class="cc-desc">{{ __('Apply without a specific offer. The admin will suggest a suitable test for you.') }}</div>
-            <button wire:click="startApplyFree"
-                class="cc-btn cc-btn-blue"
-                wire:loading.attr="disabled"
-                wire:target="startApplyFree">
-                <span wire:loading.remove wire:target="startApplyFree">✨ {{ __('Choose this option') }}</span>
-                <span wire:loading wire:target="startApplyFree">⏳...</span>
-            </button>
-        </div>
+    <div class="cc-stack">
+        {{-- Free application — top horizontal card --}}
+        <section class="cc-card cc-card--horizontal cc-card--free">
+            <div class="cc-icon cc-icon-blue" aria-hidden="true">📋</div>
+            <div class="cc-card__body">
+                <h2 class="cc-title">{{ __('Free Application') }}</h2>
+                <p class="cc-desc">{{ __('Apply without a specific offer. The admin will suggest a suitable test for you.') }}</p>
+            </div>
+            <div class="cc-card__action">
+                @php
+                    $freeAction = $this->getOfferApplyAction(null);
+                    $freeLabel = $this->offerApplyButtonLabel($freeAction);
+                @endphp
+                @php
+                    $freeDisabled = $this->offerApplyButtonIsDisabled($freeAction);
+                    $freeCanStart = $this->offerApplyButtonCanStart($freeAction);
+                @endphp
+                <button type="button"
+                    @class([
+                        $this->offerApplyButtonClass($freeAction, 'cc-btn cc-btn-blue'),
+                    ])
+                    @disabled($freeDisabled)
+                    @if ($freeCanStart)
+                        wire:click="startApplyFree"
+                        wire:loading.attr="disabled"
+                        wire:target="startApplyFree"
+                    @endif>
+                    @if ($freeDisabled)
+                        {{ $freeLabel }}
+                    @else
+                        <span wire:loading.remove wire:target="startApplyFree">
+                            @if ($freeAction === 'apply')
+                                ✨ {{ __('Choose this option') }}
+                            @else
+                                {{ $freeLabel }} →
+                            @endif
+                        </span>
+                        <span wire:loading wire:target="startApplyFree">⏳...</span>
+                    @endif
+                </button>
+            </div>
+        </section>
 
-        <div class="cc-card">
-            <div class="cc-icon cc-icon-green">💼</div>
-            <div class="cc-title">{{ __('Apply to an Offer') }}</div>
-            <div class="cc-desc">{{ __('Apply to a specific job offer published by the company.') }}</div>
+        {{-- Job offers — bottom horizontal card --}}
+        <section class="cc-card cc-card--offers">
+            <div class="cc-card__header">
+                <div class="cc-icon cc-icon-green" aria-hidden="true">💼</div>
+                <div class="cc-card__body">
+                    <h2 class="cc-title">{{ __('nav.job_offers') }}</h2>
+                    <p class="cc-desc">{{ __('Apply to a specific job offer published by the company.') }}</p>
+                </div>
+            </div>
 
-            <div style="width:100%;margin-bottom:1rem;">
+            <div class="cc-search">
                 <input type="text"
                     wire:model.live.debounce.300ms="search"
-                    placeholder="🔍 {{ __('Rechercher une offre') }}..."
-                    style="width:100%;padding:0.6rem 0.9rem;border:1.5px solid #e5e7eb;border-radius:8px;font-size:0.875rem;outline:none;box-sizing:border-box;">
+                    class="cc-search__input"
+                    placeholder="🔍 {{ __('Rechercher une offre') }}...">
             </div>
 
-            @if($offres->count() > 0)
-            <div class="offres-list" style="width:100%;">
-                @foreach($offres as $offre)
-                <div class="offre-card" id="offre-{{ $offre->id }}">
-                    <div>
-                        <div class="offre-title">{{ $offre->title }}</div>
-                        <div class="offre-meta">
-                            @if($offre->contract_type)
-                            <span class="offre-badge">{{ $offre->contract_type }}</span>
-                            @endif
-                            {{ $offre->domain }}
-                            @if($offre->deadline)
-                                · {{ __('admin.deadline') }} {{ $offre->deadline->format('d/m/Y') }}
-                            @endif
+            @if ($offres->count() > 0)
+                <div class="offres-list">
+                    @foreach ($offres as $offre)
+                        <div class="offre-card" id="offre-{{ $offre->id }}">
+                            <div class="offre-card__info">
+                                <div class="offre-title">{{ $offre->title }}</div>
+                                <div class="offre-meta">
+                                    @if ($offre->contract_type)
+                                        <span class="offre-badge">{{ $offre->contract_type }}</span>
+                                    @endif
+                                    {{ $offre->domain }}
+                                    @if ($offre->deadline)
+                                        · {{ __('admin.deadline') }} {{ $offre->deadline->format('d/m/Y') }}
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="offre-card__actions">
+                                <button type="button"
+                                    wire:click="showOfferDetails({{ $offre->id }})"
+                                    class="offre-details-btn"
+                                    wire:loading.attr="disabled"
+                                    wire:target="showOfferDetails({{ $offre->id }})">
+                                    {{ __('candidate.applications.action_details') }}
+                                </button>
+                                @include('filament.candidate.pages.partials.choix-offer-apply-button', ['offreId' => $offre->id])
+                            </div>
                         </div>
-                    </div>
-                    <button wire:click="startApplyOffre({{ $offre->id }})"
-                        class="offre-apply-btn"
-                        wire:loading.attr="disabled"
-                        wire:target="startApplyOffre({{ $offre->id }})">
-                        <span wire:loading.remove wire:target="startApplyOffre({{ $offre->id }})">{{ __('Apply to an Offer') }} →</span>
-                        <span wire:loading wire:target="startApplyOffre({{ $offre->id }})">⏳</span>
-                    </button>
+                    @endforeach
                 </div>
-                @endforeach
-            </div>
             @else
-            <div class="cc-empty">
-                @if($search)
-                    🔍 {{ __('Aucun résultat pour') }} "{{ $search }}"
-                @else
-                    {{ __('No offers available') }}
-                @endif
-            </div>
+                <div class="cc-empty">
+                    @if ($search)
+                        🔍 {{ __('Aucun résultat pour') }} "{{ $search }}"
+                    @else
+                        {{ __('No offers available') }}
+                    @endif
+                </div>
             @endif
-        </div>
+        </section>
     </div>
 
-    {{-- CV-choice modal --}}
-    @if($cvDialogOpen)
+    @if ($offerDetailsOpen)
+        @php $offerDetail = $this->getOfferDetailsData(); @endphp
+        @if ($offerDetail)
+            @php $offre = $offerDetail['offre']; @endphp
+            <div class="cc-dialog-backdrop" wire:click.self="closeOfferDetails">
+                <div class="cc-dialog cc-dialog--offer" role="dialog" aria-modal="true" aria-labelledby="offerDetailsTitle">
+                    <button type="button" class="cv-dialog-close" wire:click="closeOfferDetails" aria-label="{{ __('Close') }}">✕</button>
+
+                    <header class="cc-offer-detail-hero">
+                        <div class="cv-dialog-eyebrow">{{ __('candidate.applications.details_heading') }}</div>
+                        <h2 id="offerDetailsTitle" class="cc-offer-detail-hero__title">{{ $offre->title }}</h2>
+                        @if ($offre->domain)
+                            <p class="cc-offer-detail-hero__sub">{{ $offre->domain }}</p>
+                        @endif
+                    </header>
+
+                    <div class="cc-offer-detail-stats">
+                        <div class="cc-offer-detail-stat">
+                            <span class="cc-offer-detail-stat__value">{{ $offerDetail['tests_count'] }}</span>
+                            <span class="cc-offer-detail-stat__label">{{ __('candidate.applications.detail_tests_count') }}</span>
+                        </div>
+                        <div class="cc-offer-detail-stat">
+                            <span class="cc-offer-detail-stat__value">{{ $offerDetail['assessment_levels'] }}</span>
+                            <span class="cc-offer-detail-stat__label">{{ __('candidate.applications.detail_levels') }}</span>
+                        </div>
+                        <div class="cc-offer-detail-stat">
+                            <span class="cc-offer-detail-stat__value">{{ $offerDetail['total_applicants'] }}</span>
+                            <span class="cc-offer-detail-stat__label">{{ __('candidate.applications.detail_applicants_total') }}</span>
+                        </div>
+                        <div class="cc-offer-detail-stat cc-offer-detail-stat--accent">
+                            <span class="cc-offer-detail-stat__value">{{ $offerDetail['other_applicants'] }}</span>
+                            <span class="cc-offer-detail-stat__label">{{ __('candidate.applications.detail_other_candidates') }}</span>
+                        </div>
+                    </div>
+
+                    @if ($offre->description)
+                        <section class="cc-offer-detail-section">
+                            <h3 class="cc-offer-detail-section__title">{{ __('candidate.applications.detail_description') }}</h3>
+                            <div class="cc-offer-detail-prose">{!! nl2br(e($offre->description)) !!}</div>
+                        </section>
+                    @endif
+
+                    <section class="cc-offer-detail-section">
+                        <h3 class="cc-offer-detail-section__title">{{ __('candidate.applications.detail_offer_info') }}</h3>
+                        <dl class="cc-offer-detail-dl">
+                            @if ($offre->location)
+                                <div>
+                                    <dt>{{ __('candidate.applications.detail_location') }}</dt>
+                                    <dd>{{ $offre->location }}</dd>
+                                </div>
+                            @endif
+                            @if ($offre->contract_type)
+                                <div>
+                                    <dt>{{ __('candidate.applications.detail_contract') }}</dt>
+                                    <dd>{{ $offre->contract_type }}</dd>
+                                </div>
+                            @endif
+                            @if ($offre->deadline)
+                                <div>
+                                    <dt>{{ __('candidate.applications.detail_deadline') }}</dt>
+                                    <dd>{{ $offre->deadline->format('d/m/Y') }}</dd>
+                                </div>
+                            @endif
+                        </dl>
+                    </section>
+
+                    @if (count($offerDetail['tests']) > 0)
+                        <section class="cc-offer-detail-section">
+                            <h3 class="cc-offer-detail-section__title">{{ __('candidate.applications.detail_tests_list') }}</h3>
+                            <p class="cc-offer-detail-hint">{{ __('candidate.applications.detail_tests_list_hint') }}</p>
+                            <ol class="cc-offer-detail-tests">
+                                <li>
+                                    <span class="cc-offer-detail-tests__step">{{ __('candidate.applications.caption_cv') }}</span>
+                                    <span class="cc-offer-detail-tests__name">{{ __('candidate.applications.detail_cv_step') }}</span>
+                                </li>
+                                @foreach ($offerDetail['tests'] as $testRow)
+                                    <li>
+                                        <span class="cc-offer-detail-tests__step">{{ $testRow['label'] }}</span>
+                                        <span class="cc-offer-detail-tests__name">{{ $testRow['name'] }}</span>
+                                    </li>
+                                @endforeach
+                            </ol>
+                        </section>
+                    @endif
+
+                    <footer class="cc-offer-detail-footer">
+                        <button type="button" class="offre-details-btn" wire:click="closeOfferDetails">
+                            {{ __('Close') }}
+                        </button>
+                        @php
+                            $detailApplyAction = $this->getOfferApplyAction($offre->id);
+                            $detailApplyLabel = $this->offerApplyButtonLabel($detailApplyAction);
+                            $detailDisabled = $this->offerApplyButtonIsDisabled($detailApplyAction);
+                            $detailCanStart = $this->offerApplyButtonCanStart($detailApplyAction);
+                        @endphp
+                        <button type="button"
+                            @class([$this->offerApplyButtonClass($detailApplyAction)])
+                            @disabled($detailDisabled)
+                            @if ($detailCanStart)
+                                wire:click="applyFromOfferDetails"
+                            @endif>
+                            {{ $detailApplyLabel }}@if ($detailCanStart) →@endif
+                        </button>
+                    </footer>
+                </div>
+            </div>
+        @endif
+    @endif
+
+    @if ($cvDialogOpen)
     <div class="cv-dialog-backdrop" wire:click.self="cancelCvDialog">
         <div class="cv-dialog" role="dialog" aria-modal="true" aria-labelledby="cvDialogTitle">
             <button type="button" class="cv-dialog-close" wire:click="cancelCvDialog" aria-label="{{ __('Close') }}">✕</button>
@@ -107,13 +250,12 @@
             </p>
 
             <div class="cv-dialog-options">
-                {{-- Option 1: profile CV --}}
                 <div class="cv-dialog-option {{ $hasProfileCv ? '' : 'cv-dialog-option-disabled' }}">
                     <div class="cv-dialog-option-icon">👤</div>
                     <div class="cv-dialog-option-body">
                         <div class="cv-dialog-option-title">{{ __('Use my profile CV') }}</div>
                         <div class="cv-dialog-option-desc">
-                            @if($hasProfileCv)
+                            @if ($hasProfileCv)
                                 {{ __('Send the CV currently saved on your profile.') }}
                             @else
                                 {{ __('No CV on file yet — upload one to use this option, or upload a new CV below.') }}
@@ -131,7 +273,6 @@
                     </div>
                 </div>
 
-                {{-- Option 2: new CV --}}
                 <div class="cv-dialog-option">
                     <div class="cv-dialog-option-icon">📤</div>
                     <div class="cv-dialog-option-body">
@@ -143,7 +284,7 @@
 
                         <div wire:loading wire:target="newCv" class="cv-dialog-hint">⏳ {{ __('Uploading...') }}</div>
 
-                        @if($newCv)
+                        @if ($newCv)
                             <div class="cv-dialog-hint cv-dialog-hint-ok">
                                 ✔ {{ __('Ready to submit:') }} {{ method_exists($newCv, 'getClientOriginalName') ? $newCv->getClientOriginalName() : __('file selected') }}
                             </div>

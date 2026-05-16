@@ -1,0 +1,571 @@
+<?php
+
+namespace App\Filament\Resources\ApplicationProgressResource\Pages;
+
+use App\Filament\Concerns\HasBackHeaderAction;
+use App\Filament\Resources\ApplicationProgressResource;
+use App\Models\ApplicationProgress;
+use App\Models\CandidateNotification;
+use App\Models\QuestionResponse;
+use App\Models\Response;
+use App\Models\Test;
+use App\Services\FreeApplicationWorkflow;
+use Filament\Actions\Action;
+use Filament\Forms;
+use Filament\Forms\Concerns\InteractsWithForms;
+use Filament\Forms\Contracts\HasForms;
+use Filament\Forms\Form;
+use Filament\Notifications\Notification;
+use Filament\Resources\Pages\Concerns\InteractsWithRecord;
+use Filament\Resources\Pages\Page;
+use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\HtmlString;
+
+class ReviewApplicationLevel extends Page implements HasForms
+{
+    use HasBackHeaderAction;
+    use InteractsWithForms;
+    use InteractsWithRecord;
+
+    protected static string $resource = ApplicationProgressResource::class;
+
+    protected static string $view = 'filament.resources.application-progress-resource.pages.review-application-level';
+
+    protected static bool $shouldRegisterNavigation = false;
+
+    public int $reviewLevel = 1;
+
+    /**
+     * @var array<string, mixed>
+     */
+    public ?array $data = [];
+
+    public function mount(int|string $record, string|int $level): void
+    {
+        $this->record = $this->resolveRecord($record);
+        $this->reviewLevel = max(1, min(20, (int) $level));
+
+        abort_unless(static::getResource()::canEdit($this->record), 403);
+
+        $this->form->fill($this->showsTestSection() ? $this->buildTestReviewFormData() : []);
+    }
+
+    public function getTitle(): string|Htmlable
+    {
+        $name = $this->record->candidate?->user?->name
+            ?? $this->record->candidate?->full_name
+            ?? __('Application');
+
+        if ($this->showsCvSection() && ! $this->hasResponseForReviewLevel()) {
+            return __('admin.application_review_page_title_cv', ['name' => $name]);
+        }
+
+        return __('admin.application_review_page_title_test', [
+            'name' => $name,
+            'level' => (string) $this->reviewLevel,
+        ]);
+    }
+
+    public function form(Form $form): Form
+    {
+        return $form
+            ->schema([
+                Forms\Components\Section::make(__('admin.application_cv_section'))
+                    ->description(__('admin.application_cv_section_hint'))
+                    ->schema([
+                        Forms\Components\Placeholder::make('cv_link')
+                            ->label(__('admin.application_cv'))
+                            ->content(fn (): HtmlString => $this->getCvPlaceholder()),
+                    ])
+                    ->columns(1)
+                    ->visible(fn (): bool => $this->showsCvSection()),
+                Forms\Components\Section::make(__('admin.application_test_answers_section'))
+                    ->description(__('admin.application_test_answers_level_hint', ['level' => (string) $this->reviewLevel]))
+                    ->schema([
+                        Forms\Components\Repeater::make('level_review_items')
+                            ->label('')
+                            ->schema([
+                                Forms\Components\Hidden::make('question_response_id'),
+                                Forms\Components\TextInput::make('question_label')
+                                    ->label(__('admin.application_review_question_label'))
+                                    ->disabled()
+                                    ->dehydrated(true)
+                                    ->columnSpanFull(),
+                                Forms\Components\Textarea::make('answer_preview')
+                                    ->label(__('admin.application_review_answer_label'))
+                                    ->rows(2)
+                                    ->disabled()
+                                    ->dehydrated(true)
+                                    ->columnSpanFull(),
+                                Forms\Components\TextInput::make('auto_score')
+                                    ->label(__('admin.application_review_auto_score'))
+                                    ->disabled()
+                                    ->dehydrated(true),
+                                Forms\Components\TextInput::make('manual_score')
+                                    ->label(__('admin.application_review_manual_score'))
+                                    ->numeric()
+                                    ->step(0.01)
+                                    ->placeholder(__('admin.application_review_manual_placeholder')),
+                            ])
+                            ->columns(2)
+                            ->defaultItems(0)
+                            ->addable(false)
+                            ->deletable(false)
+                            ->reorderable(false)
+                            ->columnSpanFull(),
+                    ])
+                    ->columns(1)
+                    ->visible(fn (): bool => $this->showsTestSection()),
+            ])
+            ->statePath('data')
+            ->model($this->record);
+    }
+
+    public function getFormStatePath(): ?string
+    {
+        return 'data';
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function resolveResponseForReviewLevel(): ?Response
+    {
+        $byLevel = Response::query()
+            ->where('application_id', $this->record->id)
+            ->where('level', $this->reviewLevel)
+            ->first();
+
+        if ($byLevel) {
+            return $byLevel;
+        }
+
+        if ($this->reviewLevel <= 1) {
+            return null;
+        }
+
+        $testIndex = $this->reviewLevel - 1;
+
+        return Response::query()
+            ->where('application_id', $this->record->id)
+            ->orderBy('level')
+            ->orderBy('id')
+            ->skip($testIndex)
+            ->first();
+    }
+
+    private function responseLevelForScoring(): int
+    {
+        return (int) ($this->resolveResponseForReviewLevel()?->level ?? $this->reviewLevel);
+    }
+
+    private function buildTestReviewFormData(): array
+    {
+        $response = $this->resolveResponseForReviewLevel();
+        $response?->loadMissing(['questionResponses.question', 'questionResponses.answer']);
+
+        $items = [];
+        if (! $response) {
+            return ['level_review_items' => []];
+        }
+
+        $locale = app()->getLocale();
+        $field = match ($locale) {
+            'ar' => 'question_ar',
+            'fr' => 'question_fr',
+            default => 'question_en',
+        };
+
+        foreach ($response->questionResponses as $qr) {
+            $q = $qr->question;
+            $label = $q
+                ? (string) ($q->{$field} ?? $q->question_en ?? $q->question_fr ?? '')
+                : ('#'.$qr->question_id);
+
+            $items[] = [
+                'question_response_id' => $qr->id,
+                'question_label' => $label !== '' ? $label : ('#'.$qr->question_id),
+                'answer_preview' => $this->formatAnswerPreview($qr),
+                'auto_score' => (string) $qr->auto_score,
+                'manual_score' => $qr->manual_score,
+            ];
+        }
+
+        return ['level_review_items' => $items];
+    }
+
+    public function saveScores(): void
+    {
+        if (! $this->hasResponseForReviewLevel()) {
+            return;
+        }
+
+        $items = $this->form->getState()['level_review_items'] ?? [];
+
+        foreach ($items as $row) {
+            $id = $row['question_response_id'] ?? null;
+            if (! $id) {
+                continue;
+            }
+
+            $qr = QuestionResponse::query()->find($id);
+            if (! $qr) {
+                continue;
+            }
+
+            $manualRaw = $row['manual_score'] ?? null;
+            $useManual = $manualRaw !== null && $manualRaw !== '';
+            $manual = $useManual ? (float) $manualRaw : 0.0;
+            $auto = (float) $qr->auto_score;
+            $obtained = $useManual ? $manual : $auto;
+
+            $qr->update([
+                'manual_score' => $useManual ? $manual : 0.0,
+                'obtained_score' => $obtained,
+            ]);
+        }
+
+        ApplicationProgressResource::recalculateScoresForResponse(
+            $this->record->fresh(),
+            $this->responseLevelForScoring()
+        );
+
+        $this->form->fill($this->buildTestReviewFormData());
+
+        Notification::make()
+            ->title(__('admin.application_review_scores_saved'))
+            ->success()
+            ->send();
+    }
+
+    protected function getHeaderActions(): array
+    {
+        $actions = [];
+
+        if ($this->showsCvSection()) {
+            $actions = array_merge($actions, [
+                Action::make('viewCv')
+                    ->label(__('admin.application_view_cv'))
+                    ->icon('heroicon-o-document-text')
+                    ->color('gray')
+                    ->url(fn () => $this->record->cvPublicUrl() ?? '#')
+                    ->openUrlInNewTab()
+                    ->visible(fn () => (bool) $this->record->resolveCvStoragePath()),
+                Action::make('acceptCv')
+                    ->label(fn (): string => $this->record->isFreeApplication()
+                        ? __('admin.application_accept_cv_free')
+                        : __('admin.application_accept_cv'))
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading(__('admin.application_accept_cv_heading'))
+                    ->modalDescription(fn (): string => $this->record->isFreeApplication()
+                        ? __('admin.application_accept_cv_description_free')
+                        : __('admin.application_accept_cv_description'))
+                    ->visible(fn () => $this->record->status === 'pending')
+                    ->action(function () {
+                        if ($this->record->isFreeApplication()) {
+                            FreeApplicationWorkflow::acceptCv($this->record->fresh());
+                            $this->record->refresh();
+
+                            return;
+                        }
+
+                        $testId = $this->record->offre?->firstTestIdAfterCv() ?? $this->record->test_id;
+                        if (! $testId) {
+                            Notification::make()
+                                ->title(__('admin.application_accept_needs_test'))
+                                ->danger()
+                                ->send();
+
+                            return;
+                        }
+
+                        $this->record->update([
+                            'test_id' => $testId,
+                            'status' => 'in_progress',
+                            'apply_enabled' => true,
+                            'level_status' => 'in_progress',
+                            'test_session_expires_at' => null,
+                        ]);
+
+                        $this->record->load('test');
+
+                        CandidateNotification::create([
+                            'user_id' => $this->record->candidate->user_id,
+                            'type' => 'info',
+                            'title' => __('admin.candidate_notif_cv_accepted_title'),
+                            'message' => __('admin.candidate_notif_cv_accepted_body_with_offer', [
+                                'offer' => $this->record->offre->title,
+                                'test' => $this->record->test?->name ?? '',
+                            ]),
+                            'offre_id' => $this->record->offre_id,
+                        ]);
+
+                        Notification::make()
+                            ->title(__('admin.application_toast_cv_accepted'))
+                            ->success()
+                            ->send();
+
+                        $this->record->refresh();
+                    }),
+                Action::make('assignTest')
+                    ->label(__('admin.free_application_assign_test'))
+                    ->icon('heroicon-o-clipboard-document-list')
+                    ->color('primary')
+                    ->form([
+                        Forms\Components\Select::make('test_id')
+                            ->label(__('admin.application_associated_test'))
+                            ->options(fn (): array => Test::query()->orderBy('name')->pluck('name', 'id')->all())
+                            ->searchable()
+                            ->preload()
+                            ->required(),
+                    ])
+                    ->action(function (array $data): void {
+                        FreeApplicationWorkflow::assignTest(
+                            $this->record->fresh(),
+                            (int) $data['test_id']
+                        );
+                        $this->record->refresh();
+                    })
+                    ->visible(fn (): bool => $this->canAssignTestOnThisPage()),
+                Action::make('rejectCv')
+                    ->label(__('admin.application_reject_cv'))
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading(__('admin.application_reject_cv_heading'))
+                    ->modalDescription(__('admin.application_reject_cv_description'))
+                    ->visible(fn () => $this->record->status === 'pending')
+                    ->action(function () {
+                        $this->record->update(['status' => 'rejected']);
+
+                        CandidateNotification::create([
+                            'user_id' => $this->record->candidate->user_id,
+                            'type' => 'rejected',
+                            'title' => __('admin.candidate_notif_rejected_title'),
+                            'message' => $this->record->offre
+                                ? __('admin.candidate_notif_rejected_body_with_offer', ['offer' => $this->record->offre->title])
+                                : __('admin.candidate_notif_rejected_body_open'),
+                            'offre_id' => $this->record->offre_id,
+                        ]);
+
+                        Notification::make()
+                            ->title(__('admin.application_toast_rejected'))
+                            ->danger()
+                            ->send();
+
+                        $this->record->refresh();
+                    }),
+            ]);
+        }
+
+        if ($this->showsTestSection()) {
+            $actions = array_merge($actions, [
+            Action::make('saveScores')
+                ->label(__('admin.application_review_save_scores'))
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('primary')
+                ->visible(fn (): bool => $this->hasResponseForReviewLevel())
+                ->action(fn () => $this->saveScores()),
+            Action::make('publishScore')
+                ->label(__('admin.application_action_publish_score'))
+                ->icon('heroicon-o-chart-bar')
+                ->color('warning')
+                ->requiresConfirmation()
+                ->visible(fn (): bool => $this->canPublishScoreForThisLevel())
+                ->action(function () {
+                    ApplicationProgressResource::publishScoreForRecord(
+                        $this->record->fresh(),
+                        $this->responseLevelForScoring()
+                    );
+                    $this->record->refresh();
+                }),
+            Action::make('validateLevel')
+                ->label(__('admin.application_action_validate_level'))
+                ->icon('heroicon-o-arrow-up-circle')
+                ->color('success')
+                ->requiresConfirmation()
+                ->modalHeading(__('admin.application_action_validate_level_heading'))
+                ->modalDescription(__('admin.application_action_validate_level_description'))
+                ->visible(fn (): bool => $this->canValidateThisLevel() && ! $this->record->isFreeApplication())
+                ->action(function () {
+                    ApplicationProgressResource::advanceToNextLevel($this->record->fresh());
+                    $this->record->refresh();
+                }),
+            Action::make('assignTestAfterReview')
+                ->label(__('admin.free_application_assign_another_test'))
+                ->icon('heroicon-o-clipboard-document-list')
+                ->color('primary')
+                ->form([
+                    Forms\Components\Select::make('test_id')
+                        ->label(__('admin.application_associated_test'))
+                        ->options(fn (): array => Test::query()->orderBy('name')->pluck('name', 'id')->all())
+                        ->searchable()
+                        ->preload()
+                        ->required(),
+                ])
+                ->action(function (array $data): void {
+                    FreeApplicationWorkflow::assignTest(
+                        $this->record->fresh(),
+                        (int) $data['test_id']
+                    );
+                    $this->record->refresh();
+                })
+                ->visible(fn (): bool => $this->canAssignTestAfterReview()),
+            Action::make('validateProfile')
+                ->label(__('admin.free_application_validate_profile'))
+                ->icon('heroicon-o-check-badge')
+                ->color('success')
+                ->requiresConfirmation()
+                ->modalHeading(__('admin.free_application_validate_profile_heading'))
+                ->modalDescription(__('admin.free_application_validate_profile_description'))
+                ->visible(fn (): bool => $this->canValidateFreeProfile())
+                ->action(function (): void {
+                    FreeApplicationWorkflow::validateProfile($this->record->fresh());
+                    $this->record->refresh();
+                }),
+            ]);
+        }
+
+        return $actions;
+    }
+
+    protected function resolveBackUrl(): string
+    {
+        return $this->resolveApplicationHubBackUrl();
+    }
+
+    protected function resolveApplicationHubBackUrl(): string
+    {
+        $record = $this->record;
+
+        if ($record->isFreeApplication()) {
+            return ApplicationProgressResource::getUrl('free');
+        }
+
+        if ($record->offre_id) {
+            return ApplicationProgressResource::getUrl('by_offer', ['offre' => $record->offre_id]);
+        }
+
+        return ApplicationProgressResource::getUrl('index');
+    }
+
+    private function formatAnswerPreview(QuestionResponse $qr): string
+    {
+        $text = trim((string) ($qr->text_answer ?? ''));
+        if ($text !== '') {
+            return $text;
+        }
+
+        $qr->loadMissing('answer');
+        if ($qr->answer) {
+            $choice = trim((string) ($qr->answer->text ?? ''));
+
+            return $choice !== '' ? $choice : ('#'.$qr->answer_id);
+        }
+
+        if ($qr->obtained_score !== null && $qr->obtained_score !== '') {
+            return (string) $qr->obtained_score;
+        }
+
+        return '—';
+    }
+
+    private function showsCvSection(): bool
+    {
+        if ($this->reviewLevel !== 1) {
+            return false;
+        }
+
+        if ($this->record->status === 'pending') {
+            return true;
+        }
+
+        return $this->record->isAwaitingTestAssignment();
+    }
+
+    private function showsTestSection(): bool
+    {
+        return $this->reviewLevel > 1 || $this->hasResponseForReviewLevel();
+    }
+
+    private function canAssignTestOnThisPage(): bool
+    {
+        if (! $this->record->isFreeApplication()) {
+            return false;
+        }
+
+        return $this->record->isAwaitingTestAssignment() && $this->reviewLevel === 1;
+    }
+
+    private function canAssignTestAfterReview(): bool
+    {
+        if (! $this->record->isFreeApplication()) {
+            return false;
+        }
+
+        return $this->record->status === 'in_progress'
+            && $this->record->level_status === 'awaiting_approval'
+            && $this->hasResponseForReviewLevel()
+            && (int) $this->record->current_level === $this->responseLevelForScoring();
+    }
+
+    private function canValidateFreeProfile(): bool
+    {
+        return $this->canAssignTestAfterReview();
+    }
+
+    private function hasResponseForReviewLevel(): bool
+    {
+        return $this->resolveResponseForReviewLevel() !== null;
+    }
+
+    private function canPublishScoreForThisLevel(): bool
+    {
+        if (! $this->hasResponseForReviewLevel()) {
+            return false;
+        }
+        if ($this->record->current_level !== $this->responseLevelForScoring()) {
+            return false;
+        }
+        if ($this->record->level_status !== 'awaiting_approval') {
+            return false;
+        }
+
+        return ! $this->record->score_published;
+    }
+
+    private function canValidateThisLevel(): bool
+    {
+        if ($this->record->status !== 'in_progress') {
+            return false;
+        }
+        if ($this->record->current_level !== $this->responseLevelForScoring()) {
+            return false;
+        }
+        if ($this->record->level_status !== 'awaiting_approval') {
+            return false;
+        }
+
+        return true;
+    }
+
+    public function getCvPlaceholder(): HtmlString
+    {
+        $record = $this->record;
+        $url = $record->cvPublicUrl();
+        if (! $url) {
+            return new HtmlString(
+                '<p class="text-sm text-gray-500 dark:text-gray-400">'.e(__('admin.application_no_cv')).'</p>'
+            );
+        }
+
+        return new HtmlString(
+            '<a href="'.e($url).'" target="_blank" rel="noopener noreferrer" '
+            .'class="fi-btn relative grid-flow-col items-center justify-center font-semibold outline-none transition duration-75 focus-visible:ring-2 rounded-lg fi-btn-color-primary fi-btn-variant outlined fi-size-md gap-1.5 px-3 py-2 text-sm inline-flex">'
+            .e(__('admin.application_view_cv_open'))
+            .'</a>'
+        );
+    }
+}

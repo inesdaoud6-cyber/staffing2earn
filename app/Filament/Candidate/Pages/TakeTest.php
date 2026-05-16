@@ -10,8 +10,6 @@ use App\Models\Question;
 use App\Models\QuestionResponse;
 use App\Models\Response;
 use Filament\Notifications\Notification;
-use Filament\Pages\Page;
-
 class TakeTest extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-pencil-square';
@@ -23,6 +21,11 @@ class TakeTest extends Page
     protected static ?string $slug = 'take-test';
 
     protected static bool $shouldRegisterNavigation = false;
+
+    protected function resolveCandidateBackUrl(): string
+    {
+        return route('filament.candidate.pages.applications');
+    }
 
     public array $answers = [];
 
@@ -61,11 +64,24 @@ class TakeTest extends Page
 
     private function loadApplication(Candidate $candidate): void
     {
-        $application = ApplicationProgress::where('candidate_id', $candidate->id)
-            ->whereNotIn('status', ['rejected'])
-            ->whereNotNull('test_id')
-            ->latest()
-            ->first();
+        $requestedId = request()->query('application');
+
+        $application = null;
+        if ($requestedId !== null && $requestedId !== '' && ctype_digit((string) $requestedId)) {
+            $application = ApplicationProgress::query()
+                ->where('candidate_id', $candidate->id)
+                ->whereKey((int) $requestedId)
+                ->whereNotIn('status', ['rejected', 'cancelled'])
+                ->first();
+        }
+
+        if (! $application) {
+            $application = ApplicationProgress::where('candidate_id', $candidate->id)
+                ->whereNotIn('status', ['rejected', 'cancelled'])
+                ->whereNotNull('test_id')
+                ->latest()
+                ->first();
+        }
 
         if (! $application) {
             $this->hasTest = false;
@@ -80,6 +96,18 @@ class TakeTest extends Page
 
         if ($application->status === 'pending') {
             $this->pageStatus = 'waiting_admin';
+
+            return;
+        }
+
+        if ($application->isAwaitingTestAssignment()) {
+            $this->pageStatus = 'waiting_test_assignment';
+
+            return;
+        }
+
+        if (! $application->test_id) {
+            $this->pageStatus = 'waiting_test_assignment';
 
             return;
         }
@@ -101,7 +129,11 @@ class TakeTest extends Page
             $existing = QuestionResponse::where('response_id', $existingResponse->id)->get();
 
             foreach ($existing as $qr) {
-                $this->answers[$qr->question_id] = $qr->text_answer ?? $qr->obtained_score;
+                $question = Question::find($qr->question_id);
+                $stored = $qr->text_answer ?? $qr->obtained_score;
+                $this->answers[$qr->question_id] = $question
+                    ? $question->deserializeCandidateAnswer(is_string($stored) ? $stored : null)
+                    : $stored;
             }
 
             return;
@@ -149,7 +181,7 @@ class TakeTest extends Page
     {
         $this->answeredCount = count(array_filter(
             $this->answers,
-            fn ($a) => $a !== '' && $a !== null
+            fn ($a) => is_array($a) ? count($a) > 0 : $a !== '' && $a !== null
         ));
     }
 
@@ -213,15 +245,15 @@ class TakeTest extends Page
 
         $application->refresh();
         $application->update([
-            'status'       => 'in_progress',
+            'status' => 'in_progress',
             'level_status' => 'awaiting_approval',
         ]);
 
         CandidateNotification::create([
-            'user_id'  => auth()->id(),
-            'type'     => 'warning',
-            'title'    => __('candidate.test_timer_expired_notification_title'),
-            'message'  => __('candidate.test_timer_expired_notification_body', ['level' => $this->currentLevel]),
+            'user_id' => auth()->id(),
+            'type' => 'warning',
+            'title' => __('candidate.test_timer_expired_notification_title'),
+            'message' => __('candidate.test_timer_expired_notification_body', ['level' => $this->currentLevel]),
             'offre_id' => $application->offre_id,
         ]);
 
@@ -268,7 +300,7 @@ class TakeTest extends Page
 
         $response = Response::firstOrCreate([
             'application_id' => $application->id,
-            'level'          => $this->currentLevel,
+            'level' => $this->currentLevel,
         ]);
 
         $mainScore = 0;
@@ -279,15 +311,7 @@ class TakeTest extends Page
             $autoScore = 0;
 
             if ($question && $question->scorable) {
-                if (in_array($question->component, ['radio', 'list'])) {
-                    $correctAnswer = Answer::where('question_id', $questionId)
-                        ->where('is_correct', true)
-                        ->first();
-
-                    if ($correctAnswer && $correctAnswer->text === $answer) {
-                        $autoScore = (float) ($question->max_note ?? 0);
-                    }
-                }
+                $autoScore = $question->scoreCandidateAnswer($answer);
 
                 if ($question->classification === 'primary') {
                     $mainScore += $autoScore;
@@ -296,9 +320,10 @@ class TakeTest extends Page
                 }
             }
 
-            $answerId = in_array($question?->component, ['radio', 'list'])
-                ? Answer::where('question_id', $questionId)->where('text', $answer)->value('id')
-                : null;
+            $answerId = null;
+            if ($question && in_array($question->component, ['radio', 'list'], true) && is_string($answer)) {
+                $answerId = Answer::where('question_id', $questionId)->where('text', $answer)->value('id');
+            }
 
             QuestionResponse::updateOrCreate(
                 [
@@ -306,17 +331,17 @@ class TakeTest extends Page
                     'question_id' => $questionId,
                 ],
                 [
-                    'answer_id'      => $answerId,
-                    'auto_score'     => $autoScore,
-                    'manual_score'   => 0,
+                    'answer_id' => $answerId,
+                    'auto_score' => $autoScore,
+                    'manual_score' => 0,
                     'obtained_score' => $autoScore,
-                    'text_answer'    => is_string($answer) ? $answer : null,
+                    'text_answer' => $question?->serializeCandidateAnswer($answer),
                 ]
             );
         }
 
         $application->update([
-            'main_score'      => round($mainScore, 2),
+            'main_score' => round($mainScore, 2),
             'secondary_score' => round($secondaryScore, 2),
         ]);
 
@@ -349,15 +374,15 @@ class TakeTest extends Page
 
         $application->refresh();
         $application->update([
-            'status'       => 'in_progress',
+            'status' => 'in_progress',
             'level_status' => 'awaiting_approval',
         ]);
 
         CandidateNotification::create([
-            'user_id'  => auth()->id(),
-            'type'     => 'info',
-            'title'    => __('candidate.level_submitted_notification_title', ['level' => $this->currentLevel]),
-            'message'  => __('candidate.level_submitted_notification_body', ['level' => $this->currentLevel]),
+            'user_id' => auth()->id(),
+            'type' => 'info',
+            'title' => __('candidate.level_submitted_notification_title', ['level' => $this->currentLevel]),
+            'message' => __('candidate.level_submitted_notification_body', ['level' => $this->currentLevel]),
             'offre_id' => $application->offre_id,
         ]);
 

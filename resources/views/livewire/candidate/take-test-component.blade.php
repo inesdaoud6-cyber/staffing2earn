@@ -96,6 +96,20 @@
                     @endforeach
                 </div>
 
+            @elseif($question->component === 'checkbox' && $question->possible_answers)
+                <div style="display:flex;flex-direction:column;gap:0.5rem;">
+                    <p style="color:#6b7280;font-size:0.85rem;margin:0 0 0.25rem;">{{ __('candidate.qcm_select_all_that_apply') }}</p>
+                    @foreach($question->possible_answers as $answer)
+                    <label style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;border:1.5px solid {{ is_array($answers[$question->id] ?? null) && in_array($answer, $answers[$question->id], true) ? '#1a1a8c' : '#e5e7eb' }};border-radius:10px;cursor:pointer;background:{{ is_array($answers[$question->id] ?? null) && in_array($answer, $answers[$question->id], true) ? '#f0f1ff' : 'white' }};transition:all 0.15s;">
+                        <input type="checkbox"
+                            wire:model.live="answers.{{ $question->id }}"
+                            value="{{ $answer }}"
+                            style="accent-color:#1a1a8c;width:16px;height:16px;flex-shrink:0;">
+                        <span style="color:#374151;font-size:0.95rem;">{{ $answer }}</span>
+                    </label>
+                    @endforeach
+                </div>
+
             @elseif($question->component === 'text')
                 <textarea wire:model.live.debounce.500ms="answers.{{ $question->id }}"
                     rows="4"

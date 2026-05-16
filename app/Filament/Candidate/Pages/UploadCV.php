@@ -14,7 +14,6 @@ use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Notifications\Notification;
-use Filament\Pages\Page;
 use Illuminate\Support\HtmlString;
 
 class UploadCV extends Page

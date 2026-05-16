@@ -711,3 +711,92 @@
     height: 1.25rem;
     flex-shrink: 0;
 }
+
+/* ---------- Blocks list: search left, select-all right (one row) ---------- */
+.fi-resource-blocks .fi-ta-header-ctn {
+    border-bottom: none !important;
+}
+
+.fi-resource-blocks .fi-ta-header-toolbar {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    width: 100%;
+}
+
+.fi-resource-blocks .fi-ta-header-toolbar > .ms-auto {
+    order: 1;
+    margin-inline-start: 0 !important;
+    margin-inline-end: auto !important;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 28rem;
+}
+
+.fi-resource-blocks .fi-ta-header-toolbar > .flex.shrink-0:first-child {
+    order: 2;
+}
+
+.fi-resource-blocks .s2e-blocks-select-all-control {
+    order: 3;
+    margin-inline-start: auto !important;
+    flex-shrink: 0;
+    z-index: 2;
+}
+
+/* Select-all: large, high-contrast checkbox + label */
+.fi-resource-blocks .s2e-blocks-select-all-control {
+    min-height: 2.75rem;
+}
+
+.fi-resource-blocks .s2e-blocks-select-all-control .s2e-blocks-select-all-checkbox,
+.fi-resource-blocks .s2e-blocks-select-all-control .fi-checkbox-input {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+    min-width: 1.25rem !important;
+    min-height: 1.25rem !important;
+    flex-shrink: 0;
+    --tw-ring-color: rgb(139 92 246 / 0.65) !important;
+    --tw-ring-width: 2px !important;
+    background-color: #fff !important;
+}
+
+.fi-resource-blocks .s2e-blocks-select-all-control .fi-checkbox-input:checked {
+    background-color: var(--s2e-violet-600, #7c3aed) !important;
+    color: #fff !important;
+    --tw-ring-color: var(--s2e-violet-600, #7c3aed) !important;
+}
+
+.dark .fi-resource-blocks .s2e-blocks-select-all-control .fi-checkbox-input {
+    background-color: rgb(17 24 39) !important;
+    --tw-ring-color: rgb(167 139 250 / 0.75) !important;
+}
+
+.dark .fi-resource-blocks .s2e-blocks-select-all-control .fi-checkbox-input:checked {
+    background-color: var(--s2e-violet-500, #8b5cf6) !important;
+}
+
+/* Hide the duplicate select-all row above the card grid */
+.fi-resource-blocks .fi-ta-content > .flex.items-center.gap-x-6.bg-gray-50 {
+    display: none !important;
+}
+
+.fi-resource-blocks .fi-ta-content {
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.dark .fi-resource-blocks .fi-ta-content {
+    border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+/* ---------- Groups list: hide default Filament filter / sort bars ---------- */
+.fi-resource-groups .fi-ta-content > .flex.items-center.gap-x-6.bg-gray-50 {
+    display: none !important;
+}
+
+.fi-resource-groups .fi-ta-filters-above-content-ctn,
+.fi-resource-groups .fi-ta-header-toolbar [aria-label*="filter" i],
+.fi-resource-groups .fi-ta-header-toolbar .fi-ta-filters-trigger {
+    display: none !important;
+}

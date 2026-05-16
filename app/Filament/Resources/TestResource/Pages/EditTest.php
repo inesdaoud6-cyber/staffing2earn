@@ -4,7 +4,7 @@ namespace App\Filament\Resources\TestResource\Pages;
 
 use App\Filament\Resources\TestResource;
 use Filament\Actions;
-use Filament\Resources\Pages\EditRecord;
+use App\Filament\Resources\Pages\EditRecord;
 
 class EditTest extends EditRecord
 {

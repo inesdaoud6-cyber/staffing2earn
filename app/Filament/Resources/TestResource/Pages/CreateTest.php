@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\TestResource\Pages;
 
 use App\Filament\Resources\TestResource;
-use Filament\Resources\Pages\CreateRecord;
+use App\Filament\Resources\Pages\CreateRecord;
 use Illuminate\Validation\ValidationException;
 
 class CreateTest extends CreateRecord

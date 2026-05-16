@@ -38,6 +38,7 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogoHeight('2.5rem')
             ->favicon(asset('images/2earn.png'))
             ->sidebarCollapsibleOnDesktop()
+            ->breadcrumbs(false)
             ->renderHook(
                 'panels::topbar.end',
                 fn () => view('partials.admin-topbar-actions')
@@ -81,10 +82,6 @@ class AdminPanelProvider extends PanelProvider
                 for: 'App\\Filament\\Pages'
             )
             ->pages([Pages\Dashboard::class])
-            ->discoverWidgets(
-                in: app_path('Filament/Widgets'),
-                for: 'App\\Filament\\Widgets'
-            )
             ->widgets([
                 StatsOverview::class,
                 LatestApplications::class,

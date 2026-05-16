@@ -34,6 +34,7 @@ class CandidatePanelProvider extends PanelProvider
             ->brandLogoHeight('2.5rem')
             ->favicon(asset('images/2earn.png'))
             ->sidebarCollapsibleOnDesktop()
+            ->breadcrumbs(false)
             ->homeUrl(fn () => route('filament.candidate.pages.dashboard'))
             ->renderHook(
                 'panels::topbar.end',

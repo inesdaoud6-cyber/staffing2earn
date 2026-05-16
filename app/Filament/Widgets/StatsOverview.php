@@ -10,14 +10,16 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class StatsOverview extends BaseWidget
 {
+    protected static ?int $sort = 1;
+
     protected function getStats(): array
     {
-        $totalCandidates   = Candidate::count();
+        $totalCandidates = Candidate::count();
         $totalApplications = ApplicationProgress::where('status', '!=', 'cancelled')->count();
-        $pendingCount      = ApplicationProgress::where('status', 'pending')->count();
-        $validatedCount    = ApplicationProgress::where('status', 'validated')->count();
-        $publishedOffers   = Offre::where('is_published', true)->count();
-        $totalOffers       = Offre::count();
+        $pendingCount = ApplicationProgress::where('status', 'pending')->count();
+        $validatedCount = ApplicationProgress::where('status', 'validated')->count();
+        $publishedOffers = Offre::where('is_published', true)->count();
+        $totalOffers = Offre::count();
 
         return [
             Stat::make('Total Candidats', $totalCandidates)
@@ -26,12 +28,12 @@ class StatsOverview extends BaseWidget
                 ->color('primary'),
 
             Stat::make('Candidatures', $totalApplications)
-                ->description($pendingCount . ' en attente')
+                ->description($pendingCount.' en attente')
                 ->descriptionIcon('heroicon-o-clock')
                 ->color('warning'),
 
             Stat::make('Offres Publiées', $publishedOffers)
-                ->description('sur ' . $totalOffers . ' offres totales')
+                ->description('sur '.$totalOffers.' offres totales')
                 ->descriptionIcon('heroicon-o-briefcase')
                 ->color('success'),
 

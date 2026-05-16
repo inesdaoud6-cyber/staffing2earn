@@ -9,7 +9,10 @@ use Filament\Widgets\TableWidget as BaseWidget;
 
 class LatestApplications extends BaseWidget
 {
+    protected static ?int $sort = 2;
+
     protected static ?string $heading = 'Dernières Candidatures';
+
     protected int|string|array $columnSpan = 'full';
 
     public function table(Table $table): Table
@@ -32,7 +35,7 @@ class LatestApplications extends BaseWidget
                 TextColumn::make('status')
                     ->label('Statut')
                     ->badge()
-                    ->color(fn($state) => match($state) {
+                    ->color(fn ($state) => match ($state) {
                         'validated' => 'success',
                         'rejected' => 'danger',
                         'in_progress' => 'info',

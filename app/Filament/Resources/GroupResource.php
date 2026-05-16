@@ -10,6 +10,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class GroupResource extends Resource
 {
@@ -44,16 +45,19 @@ class GroupResource extends Resource
             Forms\Components\TextInput::make('name')
                 ->label(__('admin.group_name'))
                 ->required(),
-            Forms\Components\TextInput::make('order')
-                ->label(__('admin.order'))
-                ->numeric()
-                ->default(0),
+            Forms\Components\Textarea::make('description')
+                ->label(__('admin.description'))
+                ->rows(3)
+                ->columnSpanFull(),
         ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(
+                fn (Builder $query): Builder => $query->withCount('questions')
+            )
             ->contentGrid([
                 'md' => 2,
                 'xl' => 4,
@@ -66,17 +70,25 @@ class GroupResource extends Resource
                             ->searchable()
                             ->weight('bold'),
                         Tables\Columns\TextColumn::make('block.name')
-                            ->label('Block')
+                            ->label(__('admin.block'))
                             ->badge()
                             ->color('gray'),
                     ]),
-                    Tables\Columns\TextColumn::make('order')
-                        ->label(__('admin.order'))
-                        ->badge()
-                        ->color('info')
-                        ->sortable(),
+                    Tables\Columns\Layout\Split::make([
+                        Tables\Columns\TextColumn::make('questions_count')
+                            ->label(__('admin.questions_count'))
+                            ->badge()
+                            ->color('info'),
+                        Tables\Columns\TextColumn::make('description')
+                            ->label(__('admin.description'))
+                            ->limit(50)
+                            ->color('gray')
+                            ->size('sm'),
+                    ]),
                 ])->space(1),
             ])
+            ->defaultSort('name')
+            ->filters([])
             ->actions([
                 Tables\Actions\EditAction::make()->label(__('Edit')),
                 Tables\Actions\DeleteAction::make()->label(__('admin.delete')),

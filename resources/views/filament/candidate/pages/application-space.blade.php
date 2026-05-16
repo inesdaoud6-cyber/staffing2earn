@@ -1,13 +1,17 @@
 <x-filament-panels::page>
     @vite('resources/css/candidate-application-space.css')
 
-    @if($isAdminViewing)
-    <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:0.75rem 1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;">
-        <span style="color:#92400e;font-weight:600;">🛡️ {{ __('Admin view — detailed scores visible') }}</span>
-        <a href="/admin" style="background:#f59e0b;color:#fff;padding:0.35rem 0.9rem;border-radius:6px;font-size:0.85rem;text-decoration:none;">← {{ __('Back to admin') }}</a>
-    </div>
+    @if ($isAdminViewing)
+        <div
+            style="background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:0.75rem 1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;">
+            <span style="color:#92400e;font-weight:600;">🛡️ {{ __('Admin view — detailed scores visible') }}</span>
+            <a href="/admin"
+                style="background:#f59e0b;color:#fff;padding:0.35rem 0.9rem;border-radius:6px;font-size:0.85rem;text-decoration:none;">←
+                {{ __('Back to admin') }}</a>
+        </div>
     @endif
 
+    @if ($applicationView === 'list')
     <div class="as-header">
         <div>
             <h2>📁 {{ __('My Applications') }}</h2>
@@ -32,112 +36,155 @@
             </div>
         </div>
     </div>
+    @endif
 
-    <div class="as-table-section">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem;">
-            <div class="as-table-title">📄 {{ __('Application history') }}</div>
-            <select wire:model.live="filterStatus"
-                style="padding:0.4rem 0.75rem;border:1.5px solid #ede9fe;border-radius:8px;font-size:0.85rem;color:#374151;background:white;outline:none;">
-                <option value="">{{ __('Tous les statuts') }}</option>
-                <option value="pending">{{ __('Pending') }}</option>
-                <option value="in_progress">{{ __('In Progress') }}</option>
-                <option value="validated">{{ __('Validated') }}</option>
-                <option value="rejected">{{ __('Rejected') }}</option>
-                <option value="cancelled">{{ __('Cancelled') }}</option>
-            </select>
-        </div>
+    @if ($selectedApplicationId && $applicationView === 'details')
+        @include('filament.candidate.pages.partials.application-space-details')
+    @elseif ($selectedApplicationId && $applicationView === 'progress')
+        @php
+            $selApp = $this->getSelectedApplication();
+            $steps = $this->getStepperSteps();
+        @endphp
 
-        @if($applications->count() > 0)
-        <div class="app-cards-grid">
-            @foreach($applications as $app)
-            <div class="app-card">
-                <div class="app-card-header">
-                    <span class="app-card-candidate">{{ $candidateName }}</span>
-                    <span class="badge badge-{{ $app->status }}">
-                        {{ match($app->status) {
-                            'pending'     => __('Pending'),
-                            'in_progress' => __('In Progress'),
-                            'validated'   => __('Validated'),
-                            'rejected'    => __('Rejected'),
-                            'cancelled'   => __('Cancelled'),
-                            default       => $app->status
-                        } }}
-                    </span>
+        @if ($selApp)
+            <div class="as-detail-toolbar">
+                <button type="button" wire:click="clearApplicationSelection" class="as-back-btn">
+                    ← {{ __('candidate.applications.back_to_list') }}
+                </button>
+                <div class="as-detail-title">
+                    {{ __('candidate.applications.progress_heading') }} — {{ $selApp->offre?->title ?? __('Open application') }}
                 </div>
-
-                <div class="app-card-title">
-                    {{ $app->offre?->title ?? __('Open application') }}
-                </div>
-
-                <div class="app-card-meta">
-                    <span>{{ __('Level') }} {{ $app->current_level }}</span>
-                    <span style="font-weight:700;color:#1a1a8c;">
-                        {{ $app->score_published ? $app->main_score . '/100' : '—' }}
-                    </span>
-                    @if($app->test)
-                    <span style="color:#6b7280;font-size:0.8rem;">🧪 {{ $app->test->name }}</span>
-                    @endif
-                </div>
-
-                @can('view-candidate-scores')
-                <div style="background:#fef3c7;border-radius:6px;padding:0.4rem 0.75rem;margin:0.5rem 0;font-size:0.82rem;color:#92400e;">
-                    🔒 {{ __('Primary score') }}: {{ $app->main_score }} /
-                    {{ __('Secondary') }}: {{ $app->secondary_score ?? '—' }}
-                </div>
-                @endcan
-
-                <div class="app-card-footer">
-                    <span class="app-card-date">{{ $app->created_at->diffForHumans() }}</span>
-                    <div class="app-card-actions">
-                        @if($app->status === 'in_progress')
-                            <a href="/candidate/take-test" class="app-card-btn app-card-btn-primary">
-                                📝 {{ __('Take the test') }}
-                            </a>
-                        @elseif($app->status === 'pending')
-                            <span class="app-card-btn-note" title="{{ __('Awaiting admin review') }}">
-                                ⏳ {{ __('Waiting for admin review') }}
-                            </span>
-                        @else
-                            <a href="/candidate/applications" class="app-card-details-btn">
-                                {{ __('View details') }} →
-                            </a>
-                        @endif
-
-                        @if(! $isAdminViewing && in_array($app->status, ['pending', 'in_progress']))
-                            <button type="button"
-                                    wire:click="cancelApplication({{ $app->id }})"
-                                    wire:loading.attr="disabled"
-                                    wire:target="cancelApplication({{ $app->id }})"
-                                    onclick="return confirm('{{ __('Cancel this application? This cannot be undone.') }}')"
-                                    class="app-card-btn app-card-btn-cancel">
-                                <span wire:loading.remove wire:target="cancelApplication({{ $app->id }})">
-                                    ✕ {{ __('Cancel') }}
-                                </span>
-                                <span wire:loading wire:target="cancelApplication({{ $app->id }})">
-                                    ⏳ {{ __('Cancelling') }}
-                                </span>
-                            </button>
-                        @endif
-
-                        @can('view-candidate-scores')
-                            <a href="/admin/application-progresses/{{ $app->id }}/edit"
-                               class="app-card-btn app-card-btn-admin">
-                                {{ __('Edit') }}
-                            </a>
-                        @endcan
-                    </div>
-                </div>
+                <button type="button" wire:click="showApplicationDetails({{ $selApp->id }})" class="as-back-btn">
+                    {{ __('candidate.applications.action_details') }}
+                </button>
             </div>
-            @endforeach
-        </div>
-        @else
-        <div class="empty-state">
-            @if($filterStatus)
-                {{ __('Aucune candidature avec ce statut.') }}
-            @else
-                {{ __('No applications yet.') }}
-            @endif
-        </div>
+
+            @include('filament.candidate.pages.partials.application-space-pipeline', [
+                'steps' => $steps,
+                'selectedOfferStep' => $selectedOfferStep,
+            ])
+
+            <div class="as-panel">
+                @if ($this->isFinalDecisionStep((int) $selectedOfferStep, $selApp))
+                    <h3 class="as-panel-title">{{ __('candidate.applications.panel_decision_title') }}</h3>
+                    @if ($selApp->status === 'validated' && ! $selApp->offre_id)
+                        <p class="as-panel-desc">{{ __('candidate.applications.panel_free_potential') }}</p>
+                    @elseif ($selApp->status === 'validated')
+                        <p class="as-panel-desc">{{ __('candidate.applications.panel_decision_validated') }}</p>
+                    @elseif ($this->isFreeAwaitingTestAssignment($selApp))
+                        <p class="as-panel-desc">{{ __('candidate.applications.panel_free_awaiting_test') }}</p>
+                    @elseif ($selApp->status === 'rejected')
+                        <p class="as-panel-desc">{{ __('candidate.applications.panel_decision_rejected') }}</p>
+                    @else
+                        <p class="as-panel-desc">{{ __('candidate.applications.panel_decision_waiting') }}</p>
+                    @endif
+                @elseif ((int) $selectedOfferStep === 1)
+                    <h3 class="as-panel-title">{{ __('candidate.applications.panel_cv_title') }}</h3>
+                    @if ($this->isFreeAwaitingTestAssignment($selApp))
+                        <p class="as-panel-desc">{{ __('candidate.applications.panel_cv_accepted_awaiting_test') }}</p>
+                    @else
+                        <p class="as-panel-desc">{{ __('candidate.applications.panel_cv_desc') }}</p>
+                    @endif
+                    @php $cvUrl = $selApp->cvPublicUrl(); @endphp
+                    @if ($cvUrl)
+                        <div class="as-cv-actions">
+                            <button type="button"
+                                wire:click="showCvPreview"
+                                class="as-cv-toggle-btn"
+                                @disabled($cvPreviewVisible)
+                                wire:loading.attr="disabled"
+                                wire:target="showCvPreview">
+                                {{ __('candidate.applications.show_cv') }}
+                            </button>
+                            <button type="button"
+                                wire:click="hideCvPreview"
+                                class="as-cv-toggle-btn as-cv-toggle-btn--muted"
+                                @disabled(! $cvPreviewVisible)
+                                wire:loading.attr="disabled"
+                                wire:target="hideCvPreview">
+                                {{ __('candidate.applications.hide_cv') }}
+                            </button>
+                        </div>
+
+                        @if ($cvPreviewVisible)
+                            <div class="as-cv-viewer" aria-label="{{ __('candidate.applications.open_cv') }}">
+                                <iframe
+                                    src="{{ $cvUrl }}#view=FitH"
+                                    title="{{ __('candidate.applications.open_cv') }}"
+                                    class="as-cv-viewer__frame"
+                                ></iframe>
+                            </div>
+                            <p class="as-cv-viewer__hint">
+                                <a href="{{ $cvUrl }}" target="_blank" rel="noopener noreferrer" class="as-primary-link">
+                                    {{ __('candidate.applications.open_cv_new_tab') }}
+                                </a>
+                            </p>
+                        @endif
+                    @else
+                        <p class="as-muted">{{ __('candidate.applications.no_cv') }}</p>
+                    @endif
+                @else
+                    @php
+                        $responseLevel = (int) $selectedOfferStep - 1;
+                        $readonly = $this->hasTestResponse($selApp, $responseLevel);
+                        $writable = $this->isTestStepWritable($selApp, $responseLevel);
+                        $rows = $readonly ? $this->getTestReviewRows($selApp, $responseLevel) : [];
+                    @endphp
+
+                    @php
+                        $testNumber = max(1, (int) $selectedOfferStep - 1);
+                    @endphp
+                    <h3 class="as-panel-title">
+                        {{ __('candidate.applications.panel_test_title', ['n' => $testNumber]) }}
+                    </h3>
+
+                    @if ($readonly)
+                        <p class="as-panel-desc">{{ __('candidate.applications.panel_test_readonly') }}</p>
+                        @if (count($rows) > 0)
+                            <div class="as-review-table-wrap">
+                                <table class="as-review-table">
+                                    <thead>
+                                        <tr>
+                                            <th>{{ __('candidate.applications.col_question') }}</th>
+                                            <th>{{ __('candidate.applications.col_your_answer') }}</th>
+                                            <th>{{ __('candidate.applications.col_score') }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($rows as $row)
+                                            <tr>
+                                                <td>{{ $row['question'] }}</td>
+                                                <td>{{ $row['answer'] }}</td>
+                                                <td>{{ $row['score'] ?? '—' }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @else
+                            <p class="as-muted">{{ __('candidate.applications.no_questions_loaded') }}</p>
+                        @endif
+
+                        @php
+                            $publishedScoreLabel = $this->publishedMainScoreLabel($selApp);
+                        @endphp
+                        @if ($publishedScoreLabel)
+                            <p class="as-score-banner">
+                                {{ __('candidate.applications.published_score', ['score' => $publishedScoreLabel]) }}
+                            </p>
+                        @endif
+                    @elseif ($writable)
+                        <p class="as-panel-desc">{{ __('candidate.applications.panel_test_editable') }}</p>
+                        <a href="{{ $this->takeTestUrl($selApp) }}" class="as-primary-btn">
+                            {{ __('Take the test') }} →
+                        </a>
+                    @else
+                        <p class="as-muted">{{ __('candidate.applications.panel_test_locked_msg') }}</p>
+                    @endif
+                @endif
+            </div>
         @endif
-    </div>
+    @else
+        @include('filament.candidate.pages.partials.application-space-list')
+    @endif
 </x-filament-panels::page>

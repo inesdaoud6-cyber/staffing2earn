@@ -95,13 +95,131 @@ class Question extends Model
         return $this->hasMany(QuestionResponse::class);
     }
 
+    public function isMcqComponent(): bool
+    {
+        return in_array($this->component, ['radio', 'list', 'checkbox'], true);
+    }
+
+    public function isMultipleChoiceComponent(): bool
+    {
+        return $this->component === 'checkbox';
+    }
+
     /**
-     * Keep the answers table in sync with possible_answers + correct_answer so
-     * candidate auto-scoring (Answer::is_correct) continues to work.
+     * @return list<string>
+     */
+    public function correctAnswerValues(): array
+    {
+        if ($this->component === 'checkbox') {
+            $raw = $this->correct_answer;
+            if (is_string($raw) && str_starts_with(trim($raw), '[')) {
+                $decoded = json_decode($raw, true);
+
+                if (is_array($decoded)) {
+                    return array_values(array_filter(
+                        array_map('strval', $decoded),
+                        static fn (string $v): bool => $v !== ''
+                    ));
+                }
+            }
+
+            return [];
+        }
+
+        if ($this->correct_answer !== null && $this->correct_answer !== '') {
+            return [(string) $this->correct_answer];
+        }
+
+        return [];
+    }
+
+    public function scoreCandidateAnswer(mixed $answer): float
+    {
+        if (! $this->scorable) {
+            return 0.0;
+        }
+
+        if (in_array($this->component, ['radio', 'list'], true)) {
+            $correct = $this->answers()->where('is_correct', true)->first();
+
+            if ($correct && (string) $correct->text === (string) $answer) {
+                return (float) ($this->max_note ?? 0);
+            }
+
+            return 0.0;
+        }
+
+        if ($this->component === 'checkbox') {
+            $selected = is_array($answer)
+                ? array_values(array_map('strval', $answer))
+                : [];
+            $correct = $this->correctAnswerValues();
+            sort($selected);
+            $sortedCorrect = $correct;
+            sort($sortedCorrect);
+
+            if ($correct !== [] && $selected === $sortedCorrect) {
+                return (float) ($this->max_note ?? 0);
+            }
+
+            return 0.0;
+        }
+
+        return 0.0;
+    }
+
+    public function serializeCandidateAnswer(mixed $answer): ?string
+    {
+        if ($this->component === 'checkbox') {
+            $values = is_array($answer)
+                ? array_values(array_filter(
+                    array_map('strval', $answer),
+                    static fn (string $v): bool => $v !== ''
+                ))
+                : [];
+
+            return json_encode($values, JSON_UNESCAPED_UNICODE);
+        }
+
+        return is_string($answer) ? $answer : null;
+    }
+
+    public function deserializeCandidateAnswer(?string $stored): mixed
+    {
+        if ($this->component === 'checkbox' && is_string($stored) && str_starts_with(trim($stored), '[')) {
+            $decoded = json_decode($stored, true);
+
+            return is_array($decoded) ? array_values($decoded) : [];
+        }
+
+        return $stored;
+    }
+
+    /**
+     * @param  list<string>|string|null  $multipleCorrect
+     */
+    public static function encodeCorrectAnswerForStorage(string $component, mixed $singleCorrect, mixed $multipleCorrect = null): ?string
+    {
+        if ($component === 'checkbox') {
+            $values = is_array($multipleCorrect)
+                ? array_values(array_filter(
+                    array_map('strval', $multipleCorrect),
+                    static fn (string $v): bool => $v !== ''
+                ))
+                : [];
+
+            return $values !== [] ? json_encode($values, JSON_UNESCAPED_UNICODE) : null;
+        }
+
+        return $singleCorrect !== null && $singleCorrect !== '' ? (string) $singleCorrect : null;
+    }
+
+    /**
+     * Keep the answers table in sync with possible_answers + correct answer(s).
      */
     public function syncAnswerRowsFromMcqOptions(): void
     {
-        if (! in_array($this->component, ['radio', 'list'], true)) {
+        if (! $this->isMcqComponent()) {
             $this->answers()->delete();
 
             return;
@@ -114,13 +232,13 @@ class Question extends Model
             static fn ($t) => $t !== null && $t !== ''
         ));
 
-        $correct = $this->correct_answer;
+        $correctValues = $this->correctAnswerValues();
 
         foreach ($options as $order => $text) {
             Answer::create([
                 'question_id' => $this->id,
                 'text' => (string) $text,
-                'is_correct' => $correct !== null && (string) $correct === (string) $text,
+                'is_correct' => in_array((string) $text, $correctValues, true),
                 'order' => $order,
             ]);
         }

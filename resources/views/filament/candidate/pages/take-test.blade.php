@@ -24,6 +24,13 @@
             <p class="text-amber-900/80 dark:text-amber-200/80">{{ __('candidate.take_test_waiting_admin_body') }}</p>
         </div>
 
+    @elseif ($this->pageStatus === 'waiting_test_assignment')
+        <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-10 text-center dark:border-indigo-900 dark:bg-indigo-950/40">
+            <div class="mb-4 text-4xl">📎</div>
+            <h2 class="mb-2 text-xl font-bold text-indigo-950 dark:text-indigo-100">{{ __('candidate.take_test_waiting_assignment_title') }}</h2>
+            <p class="text-indigo-900/80 dark:text-indigo-200/80">{{ __('candidate.take_test_waiting_assignment_body') }}</p>
+        </div>
+
     @elseif ($this->pageStatus === 'waiting_level_validation')
         <div class="rounded-xl border border-blue-200 bg-blue-50 p-10 text-center dark:border-blue-900 dark:bg-blue-950/40">
             <div class="mb-4 text-4xl">🎯</div>
@@ -142,6 +149,21 @@
                                 <label class="flex cursor-pointer items-center gap-3">
                                     <input
                                         type="radio"
+                                        wire:model.live="answers.{{ $question->id }}"
+                                        value="{{ $answer }}"
+                                        @disabled($this->alreadySubmitted)
+                                    />
+                                    <span style="color: #d1d5db;">{{ $answer }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    @elseif ($question->component === 'checkbox' && $question->possible_answers)
+                        <div class="space-y-2">
+                            <p class="text-sm" style="color: #9ca3af;">{{ __('candidate.qcm_select_all_that_apply') }}</p>
+                            @foreach ($question->possible_answers as $answer)
+                                <label class="flex cursor-pointer items-center gap-3">
+                                    <input
+                                        type="checkbox"
                                         wire:model.live="answers.{{ $question->id }}"
                                         value="{{ $answer }}"
                                         @disabled($this->alreadySubmitted)

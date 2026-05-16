@@ -2,11 +2,12 @@
 
 namespace App\Filament\Resources\QuestionResource\Pages;
 
+use App\Filament\Concerns\HasBackHeaderAction;
 use App\Filament\Resources\QuestionResource;
 use App\Models\Block;
 use App\Models\Group;
-use App\Models\Offre;
 use App\Models\Question;
+use App\Support\QuestionFormOptions;
 use App\Services\TranslationService;
 use Filament\Actions;
 use Filament\Forms;
@@ -26,6 +27,7 @@ use Illuminate\Support\Str;
  */
 class CreateQuestionsForm extends Page implements HasForms
 {
+    use HasBackHeaderAction;
     use InteractsWithFormActions;
     use InteractsWithForms;
 
@@ -57,7 +59,6 @@ class CreateQuestionsForm extends Page implements HasForms
         $this->form->fill([
             'block_id' => null,
             'group_id' => null,
-            'offre_id' => null,
             'items' => [$this->emptyQuestionRow()],
         ]);
     }
@@ -79,6 +80,7 @@ class CreateQuestionsForm extends Page implements HasForms
             'scorable' => true,
             'auto_evaluation' => true,
             'correct_answer' => null,
+            'correct_answers' => [],
             'correct_text_reference' => null,
             'max_note' => 1,
             'second_ratio' => 0,
@@ -118,14 +120,8 @@ class CreateQuestionsForm extends Page implements HasForms
                             ->searchable()
                             ->nullable()
                             ->disabled(fn (Get $get): bool => ! filled($get('block_id'))),
-                        Forms\Components\Select::make('offre_id')
-                            ->label(__('admin.associated_offer'))
-                            ->options(Offre::query()->where('is_published', true)->pluck('title', 'id'))
-                            ->searchable()
-                            ->nullable()
-                            ->placeholder(__('admin.no_offer')),
                     ])
-                    ->columns(3),
+                    ->columns(2),
                 Forms\Components\Repeater::make('items')
                     ->label(__('test_builder.questions'))
                     ->addActionLabel(__('test_builder.add_question'))
@@ -141,7 +137,8 @@ class CreateQuestionsForm extends Page implements HasForms
                             Forms\Components\Select::make('component')
                                 ->label(__('test_builder.answer_kind'))
                                 ->options([
-                                    'radio' => __('test_builder.kind_single_choice'),
+                                    'radio' => __('test_builder.kind_qcu'),
+                                    'checkbox' => __('test_builder.kind_qcm'),
                                     'list' => __('test_builder.kind_dropdown'),
                                     'text' => __('test_builder.kind_paragraph'),
                                     'date' => __('test_builder.kind_date'),
@@ -167,8 +164,10 @@ class CreateQuestionsForm extends Page implements HasForms
                         Forms\Components\TagsInput::make('possible_answers')
                             ->label(__('test_builder.options'))
                             ->placeholder(__('test_builder.option_placeholder'))
-                            ->helperText(__('test_builder.options_hint'))
-                            ->visible(fn (Get $get) => in_array($get('component'), ['radio', 'list'], true))
+                            ->helperText(fn (Get $get): string => QuestionFormOptions::isMultipleChoiceComponent($get('component'))
+                                ? __('test_builder.options_hint_qcm')
+                                : __('test_builder.options_hint'))
+                            ->visible(fn (Get $get): bool => QuestionFormOptions::isMcqComponent($get('component')))
                             ->live(onBlur: true),
                         Forms\Components\Grid::make(3)->schema([
                             Forms\Components\Toggle::make('obligatory')
@@ -183,11 +182,18 @@ class CreateQuestionsForm extends Page implements HasForms
                                 ->live(),
                         ]),
                         Forms\Components\Select::make('correct_answer')
-                            ->label(__('admin.correct_answer_select'))
-                            ->options(fn (Get $get) => collect($get('possible_answers') ?? [])->mapWithKeys(fn ($a) => [$a => $a]))
+                            ->label(__('admin.correct_answer_select_qcu'))
+                            ->options(fn (Get $get): array => collect($get('possible_answers') ?? [])->mapWithKeys(fn ($a) => [$a => $a])->all())
                             ->searchable()
-                            ->visible(fn (Get $get) => (bool) $get('auto_evaluation')
-                                && in_array($get('component'), ['radio', 'list'], true)),
+                            ->visible(fn (Get $get): bool => (bool) $get('auto_evaluation')
+                                && QuestionFormOptions::isSingleChoiceComponent($get('component'))),
+
+                        Forms\Components\CheckboxList::make('correct_answers')
+                            ->label(__('admin.correct_answers_select_qcm'))
+                            ->options(fn (Get $get): array => collect($get('possible_answers') ?? [])->mapWithKeys(fn ($a) => [$a => $a])->all())
+                            ->columns(2)
+                            ->visible(fn (Get $get): bool => (bool) $get('auto_evaluation')
+                                && QuestionFormOptions::isMultipleChoiceComponent($get('component'))),
                         Forms\Components\TextInput::make('correct_text_reference')
                             ->label(__('test_builder.reference_answer'))
                             ->visible(fn (Get $get) => (bool) $get('auto_evaluation')
@@ -216,7 +222,7 @@ class CreateQuestionsForm extends Page implements HasForms
         $association = [
             'block_id' => $state['block_id'] ?? null,
             'group_id' => $state['group_id'] ?? null,
-            'offre_id' => $state['offre_id'] ?? null,
+            'offre_id' => null,
         ];
 
         $created = 0;
@@ -260,12 +266,17 @@ class CreateQuestionsForm extends Page implements HasForms
         $component = $item['component'] ?? 'radio';
 
         $correctMcq = $item['correct_answer'] ?? null;
+        $correctMcqMultiple = $item['correct_answers'] ?? null;
         $correctText = $item['correct_text_reference'] ?? null;
 
         $correctAnswer = null;
         if (! empty($item['auto_evaluation'])) {
-            if (in_array($component, ['radio', 'list'], true)) {
-                $correctAnswer = $correctMcq;
+            if (QuestionFormOptions::isMcqComponent($component)) {
+                $correctAnswer = Question::encodeCorrectAnswerForStorage(
+                    $component,
+                    $correctMcq,
+                    $correctMcqMultiple,
+                );
             } elseif ($component === 'text') {
                 $correctAnswer = $correctText;
             }
@@ -279,7 +290,7 @@ class CreateQuestionsForm extends Page implements HasForms
         return [
             'block_id' => $item['block_id'] ?? null,
             'group_id' => $item['group_id'] ?? null,
-            'offre_id' => $item['offre_id'] ?? null,
+            'offre_id' => null,
             'question_fr' => $item['question_fr'] ?? '',
             'question_en' => $item['question_en'] ?? '',
             'question_ar' => $item['question_ar'] ?? '',
@@ -294,7 +305,7 @@ class CreateQuestionsForm extends Page implements HasForms
             'second_ratio' => (float) ($item['second_ratio'] ?? 0),
             'user_note' => $item['user_note'] ?? null,
             'note_rule' => $item['note_rule'] ?? null,
-            'possible_answers' => in_array($component, ['radio', 'list'], true) ? $possible : null,
+            'possible_answers' => QuestionFormOptions::isMcqComponent($component) ? $possible : null,
         ];
     }
 
@@ -331,14 +342,13 @@ class CreateQuestionsForm extends Page implements HasForms
         ];
     }
 
-    protected function getHeaderActions(): array
+    protected function resolveBackUrl(): string
     {
-        return [
-            Actions\Action::make('back')
-                ->label(__('question_form.back_to_list'))
-                ->color('gray')
-                ->icon('heroicon-o-arrow-left')
-                ->url(fn () => QuestionResource::getUrl('index')),
-        ];
+        return QuestionResource::getUrl('index');
+    }
+
+    protected function getBackNavigationLabel(): string
+    {
+        return __('question_form.back_to_list');
     }
 }

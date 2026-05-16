@@ -7,7 +7,6 @@ use App\Models\Candidate;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
-use Filament\Pages\Page;
 use Illuminate\Support\Facades\Validator;
 use Livewire\WithFileUploads;
 
@@ -266,10 +265,10 @@ class MyProfile extends Page
     protected function getHeaderActions(): array
     {
         if (! auth()->user()->can('edit-candidate-status')) {
-            return [];
+            return parent::getHeaderActions();
         }
 
-        return [
+        return array_merge(parent::getHeaderActions(), [
             Action::make('changeStatus')
                 ->label('Changer le statut')
                 ->icon('heroicon-o-arrow-path')
@@ -296,6 +295,6 @@ class MyProfile extends Page
                             ->send();
                     }
                 }),
-        ];
+        ]);
     }
 }

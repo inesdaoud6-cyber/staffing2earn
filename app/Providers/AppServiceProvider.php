@@ -9,7 +9,10 @@ use App\Models\Offre;
 use App\Observers\ApplicationProgressObserver;
 use App\Observers\OffreObserver;
 use Filament\Http\Responses\Auth\Contracts\LogoutResponse as LogoutResponseContract;
+use App\Filament\Resources\BlockResource\Pages\ListBlocks;
+use App\Filament\Resources\GroupResource\Pages\ListGroups;
 use Filament\Support\Facades\FilamentView;
+use Filament\Tables\View\TablesRenderHook;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
@@ -47,15 +50,30 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('view-test-results-detail', fn ($user) => $user->hasRole('admin'));
 
         FilamentView::registerRenderHook(
+            TablesRenderHook::TOOLBAR_END,
+            fn (): string => view('filament.partials.blocks-list-select-all')->render(),
+            scopes: [ListBlocks::class],
+        );
+
+        FilamentView::registerRenderHook(
             PanelsRenderHook::RESOURCE_PAGES_LIST_RECORDS_TABLE_BEFORE,
             function (): string {
-                if (! (Livewire::current() instanceof \App\Filament\Resources\UserResource\Pages\ListUsers)) {
-                    return '';
+                $current = Livewire::current();
+
+                if ($current instanceof \App\Filament\Resources\UserResource\Pages\ListUsers) {
+                    return View::make('filament.resources.user-list-records-toolbar')->render();
                 }
 
-                return View::make('filament.resources.user-list-records-toolbar')->render();
+                if ($current instanceof ListGroups) {
+                    return View::make('filament.resources.groups-list-toolbar')->render();
+                }
+
+                return '';
             },
-            scopes: [\App\Filament\Resources\UserResource::class],
+            scopes: [
+                \App\Filament\Resources\UserResource::class,
+                \App\Filament\Resources\GroupResource::class,
+            ],
         );
     }
 }
