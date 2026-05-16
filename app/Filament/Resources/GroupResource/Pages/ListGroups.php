@@ -2,16 +2,19 @@
 
 namespace App\Filament\Resources\GroupResource\Pages;
 
+use App\Filament\Concerns\InteractsWithCreatedAtSort;
 use App\Filament\Resources\GroupResource;
 use App\Models\Block;
-use Filament\Actions;
 use App\Filament\Resources\Pages\ListRecords;
+use Filament\Actions;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Url;
 
 class ListGroups extends ListRecords
 {
+    use InteractsWithCreatedAtSort;
+
     protected static string $resource = GroupResource::class;
 
     #[Url(as: 'block')]
@@ -45,7 +48,7 @@ class ListGroups extends ListRecords
                     $query->where('block_id', (int) $this->blockFilter);
                 }
 
-                return $query;
+                return $this->applyCreatedAtSort($query);
             });
     }
 

@@ -81,7 +81,7 @@ class BlockResource extends Resource
             ],
             ['md' => 2, 'xl' => 4],
         )
-            ->defaultSort('name')
+            ->defaultSort('created_at', 'desc')
             ->filters([])
             ->actions([
                 Tables\Actions\EditAction::make()->label('Modifier'),

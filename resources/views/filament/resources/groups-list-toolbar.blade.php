@@ -31,10 +31,13 @@
         </x-filament::input.wrapper>
     </div>
 
-    <div class="flex shrink-0 items-center gap-x-2">
-        <span class="whitespace-nowrap text-sm font-medium text-gray-950 dark:text-white">
-            {{ __('admin.filter') }}
-        </span>
+    <div class="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2">
+        @include('filament.partials.list-time-sort-select', ['sortWireKey' => 'groups-list-time-sort'])
+
+        <div class="flex items-center gap-x-2">
+            <span class="whitespace-nowrap text-sm font-medium text-gray-950 dark:text-white">
+                {{ __('admin.filter') }}
+            </span>
         <div class="w-44 sm:w-52">
             <x-filament::input.wrapper>
                 <x-filament::input.select
@@ -51,6 +54,7 @@
                     @endforeach
                 </x-filament::input.select>
             </x-filament::input.wrapper>
+        </div>
         </div>
     </div>
 </div>

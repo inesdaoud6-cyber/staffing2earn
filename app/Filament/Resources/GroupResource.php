@@ -80,6 +80,11 @@ class GroupResource extends Resource
                     ->label(__('admin.description'))
                     ->limit(50)
                     ->toggleable(),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label(__('Date'))
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ],
             [
                 TableLayoutConfigurator::cardStack([
@@ -108,7 +113,7 @@ class GroupResource extends Resource
             ],
             ['md' => 2, 'xl' => 4],
         )
-            ->defaultSort('name')
+            ->defaultSort('created_at', 'desc')
             ->filters([])
             ->actions([
                 Tables\Actions\EditAction::make()->label(__('Edit')),

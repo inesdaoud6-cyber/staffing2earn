@@ -65,6 +65,10 @@ class AppServiceProvider extends ServiceProvider
                     return View::make('filament.resources.user-list-records-toolbar')->render();
                 }
 
+                if ($current instanceof ListBlocks) {
+                    return View::make('filament.resources.blocks-list-toolbar')->render();
+                }
+
                 if ($current instanceof ListGroups) {
                     return View::make('filament.resources.groups-list-toolbar')->render();
                 }
@@ -77,6 +81,7 @@ class AppServiceProvider extends ServiceProvider
             },
             scopes: [
                 \App\Filament\Resources\UserResource::class,
+                \App\Filament\Resources\BlockResource::class,
                 \App\Filament\Resources\GroupResource::class,
                 \App\Filament\Resources\QuestionResource::class,
             ],

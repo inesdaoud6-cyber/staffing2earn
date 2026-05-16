@@ -53,7 +53,7 @@ class ReviewApplicationLevel extends Page implements HasForms
 
         abort_unless(static::getResource()::canEdit($this->record), 403);
 
-        if ($this->showsTestSection()) {
+        if ($this->showsTestSection() && $this->hasResponseForReviewLevel()) {
             $this->ensureReviewQuestionResponses();
         }
 
@@ -89,11 +89,36 @@ class ReviewApplicationLevel extends Page implements HasForms
                     ])
                     ->columns(1)
                     ->visible(fn (): bool => $this->showsCvSection()),
-                Forms\Components\Section::make(__('admin.application_test_answers_section'))
-                    ->description(__('admin.application_test_answers_level_hint', [
-                        'level' => (string) ApplicationProgressStepMapper::testNumberFromOfferStep($this->reviewLevel),
-                    ]))
+                Forms\Components\Section::make(fn (): string => $this->hasResponseForReviewLevel()
+                    ? __('admin.application_test_answers_section')
+                    : __('admin.application_test_preview_section'))
+                    ->description(fn (): string => $this->hasResponseForReviewLevel()
+                        ? __('admin.application_test_answers_level_hint', [
+                            'level' => (string) ApplicationProgressStepMapper::testNumberFromOfferStep($this->reviewLevel),
+                        ])
+                        : __('admin.application_test_preview_level_hint', [
+                            'level' => (string) ApplicationProgressStepMapper::testNumberFromOfferStep($this->reviewLevel),
+                        ]))
                     ->schema([
+                        Forms\Components\Placeholder::make('no_test_for_step')
+                            ->label('')
+                            ->content(fn (): HtmlString => new HtmlString(
+                                '<p class="text-sm text-gray-600 dark:text-gray-400">'
+                                .e(__('admin.application_test_not_configured_for_step'))
+                                .'</p>'
+                            ))
+                            ->visible(fn (): bool => $this->resolveTestForReviewStep() === null)
+                            ->columnSpanFull(),
+                        Forms\Components\Placeholder::make('test_preview_notice')
+                            ->label('')
+                            ->content(fn (): HtmlString => new HtmlString(
+                                '<p class="text-sm text-amber-700 dark:text-amber-300">'
+                                .e(__('admin.application_test_preview_notice'))
+                                .'</p>'
+                            ))
+                            ->visible(fn (): bool => ! $this->hasResponseForReviewLevel()
+                                && $this->resolveTestForReviewStep() !== null)
+                            ->columnSpanFull(),
                         Forms\Components\Placeholder::make('test_score_summary')
                             ->label(__('admin.test_score'))
                             ->content(fn (): HtmlString => $this->getTestScoreSummaryHtml())
@@ -236,20 +261,24 @@ class ReviewApplicationLevel extends Page implements HasForms
 
     private function buildTestReviewFormData(): array
     {
-        $response = $this->resolveResponseForReviewLevel();
         $test = $this->resolveTestForReviewStep();
 
-        if (! $response || ! $test) {
+        if (! $test) {
             return ['level_review_items' => []];
         }
 
-        $response->loadMissing(['questionResponses.question', 'questionResponses.answer']);
+        $response = $this->resolveResponseForReviewLevel();
+
+        if ($response) {
+            $response->loadMissing(['questionResponses.question', 'questionResponses.answer']);
+        }
 
         $scoring = app(TestScoringService::class);
-        $questions = $scoring->questionsForTestLevel($test, $this->responseLevelForScoring())
-            ->where('scorable', true);
+        $questions = $scoring->questionsForTestLevel($test, $this->responseLevelForScoring());
 
-        $byQuestionId = $response->questionResponses->keyBy('question_id');
+        $byQuestionId = $response
+            ? $response->questionResponses->keyBy('question_id')
+            : collect();
 
         $locale = app()->getLocale();
         $field = match ($locale) {
@@ -262,20 +291,18 @@ class ReviewApplicationLevel extends Page implements HasForms
 
         foreach ($questions as $q) {
             $qr = $byQuestionId->get($q->id);
-            if (! $qr) {
-                continue;
-            }
-
             $label = (string) ($q->{$field} ?? $q->question_en ?? $q->question_fr ?? '');
-            $needsManual = ! $scoring->isAutoScorableComponent($q->component);
+            $needsManual = $qr && ! $scoring->isAutoScorableComponent($q->component);
 
             $items[] = [
-                'question_response_id' => $qr->id,
+                'question_response_id' => $qr?->id,
                 'needs_manual' => $needsManual,
-                'question_label' => $label !== '' ? $label : ('#'.$qr->question_id),
-                'answer_preview' => $this->formatAnswerPreview($qr),
-                'auto_score' => (string) $qr->auto_score,
-                'manual_score' => $qr->manual_score > 0 ? $qr->manual_score : null,
+                'question_label' => $label !== '' ? $label : ('#'.$q->id),
+                'answer_preview' => $qr
+                    ? $this->formatAnswerPreview($qr)
+                    : __('admin.application_review_no_answer'),
+                'auto_score' => $qr ? (string) $qr->auto_score : '',
+                'manual_score' => $qr && $qr->manual_score > 0 ? $qr->manual_score : null,
             ];
         }
 
