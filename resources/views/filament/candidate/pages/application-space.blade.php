@@ -126,14 +126,12 @@
                     @endif
                 @else
                     @php
-                        $responseLevel = (int) $selectedOfferStep - 1;
+                        $offerStep = (int) $selectedOfferStep;
+                        $responseLevel = $this->responseLevelForOfferStep($offerStep);
+                        $testNumber = $this->testNumberForOfferStep($offerStep);
                         $readonly = $this->hasTestResponse($selApp, $responseLevel);
                         $writable = $this->isTestStepWritable($selApp, $responseLevel);
-                        $rows = $readonly ? $this->getTestReviewRows($selApp, $responseLevel) : [];
-                    @endphp
-
-                    @php
-                        $testNumber = max(1, (int) $selectedOfferStep - 1);
+                        $rows = $readonly ? $this->getTestReviewRows($selApp, $offerStep) : [];
                     @endphp
                     <h3 class="as-panel-title">
                         {{ __('candidate.applications.panel_test_title', ['n' => $testNumber]) }}

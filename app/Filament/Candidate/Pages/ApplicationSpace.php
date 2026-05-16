@@ -9,6 +9,7 @@ use App\Models\Question;
 use App\Models\QuestionResponse;
 use App\Models\Response;
 use App\Models\Test;
+use App\Support\ApplicationProgressStepMapper;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -407,7 +408,17 @@ class ApplicationSpace extends Page
             return 1;
         }
 
-        return $this->resolveAssessmentStepCount($app);
+        return ApplicationProgressStepMapper::assessmentStepCount($app);
+    }
+
+    public function testNumberForOfferStep(int $offerStep): int
+    {
+        return ApplicationProgressStepMapper::testNumberFromOfferStep($offerStep);
+    }
+
+    public function responseLevelForOfferStep(int $offerStep): int
+    {
+        return ApplicationProgressStepMapper::responseLevelFromOfferStep($offerStep);
     }
 
     public function stepStateLabel(string $state): string
@@ -428,7 +439,7 @@ class ApplicationSpace extends Page
             return false;
         }
 
-        return $offerStep > $this->resolveAssessmentStepCount($app);
+        return $offerStep > ApplicationProgressStepMapper::assessmentStepCount($app);
     }
 
     public function isFreeAwaitingTestAssignment(?ApplicationProgress $app = null): bool
@@ -447,11 +458,11 @@ class ApplicationSpace extends Page
 
         $app->loadMissing(['offre', 'test', 'responses']);
 
-        $assessmentTotal = $this->resolveAssessmentStepCount($app);
+        $assessmentTotal = ApplicationProgressStepMapper::assessmentStepCount($app);
         $steps = [];
 
         for ($offerStep = 1; $offerStep <= $assessmentTotal; $offerStep++) {
-            if ($offerStep === 1) {
+            if (ApplicationProgressStepMapper::isCvOfferStep($offerStep)) {
                 $steps[] = $this->buildCvStep($app, $offerStep);
             } else {
                 $steps[] = $this->buildTestStep($app, $offerStep);
@@ -475,18 +486,7 @@ class ApplicationSpace extends Page
 
     public function resolveResponseForOfferStep(ApplicationProgress $app, int $offerStep): ?Response
     {
-        if ($offerStep <= 1) {
-            return null;
-        }
-
-        $testIndex = $offerStep - 2;
-
-        return Response::query()
-            ->where('application_id', $app->id)
-            ->orderBy('level')
-            ->orderBy('id')
-            ->skip($testIndex)
-            ->first();
+        return ApplicationProgressStepMapper::resolveResponseForOfferStep($app, $offerStep);
     }
 
     public function formatPublishedScore(?float $value): ?string
@@ -552,9 +552,8 @@ class ApplicationSpace extends Page
     /**
      * @return list<array{question: string, answer: string, score: ?string}>
      */
-    public function getTestReviewRows(ApplicationProgress $app, int $responseLevel): array
+    public function getTestReviewRows(ApplicationProgress $app, int $offerStep): array
     {
-        $offerStep = $responseLevel + 1;
         $response = $this->resolveResponseForOfferStep($app, $offerStep);
 
         if (! $response) {
@@ -642,56 +641,6 @@ class ApplicationSpace extends Page
         $this->loadApplications();
     }
 
-    /**
-     * CV (step 1) + every test configured on the job offer.
-     */
-    private function resolveAssessmentStepCount(ApplicationProgress $app): int
-    {
-        if ($app->offre) {
-            $offre = $app->offre;
-            $fromLevels = max(2, (int) $offre->levels_count);
-            $configuredTests = count(array_filter(
-                array_values($offre->level_test_ids ?? []),
-                fn ($id) => (int) $id > 0
-            ));
-
-            return min(20, max($fromLevels, 1 + $configuredTests));
-        }
-
-        if ($app->isFreeApplication()) {
-            return $this->resolveFreeApplicationAssessmentStepCount($app);
-        }
-
-        $fromResponses = (int) ($app->responses()->max('level') ?? 0);
-        $fromCurrent = (int) $app->current_level;
-
-        return min(20, max(2, $fromResponses + 2, $fromCurrent + 1));
-    }
-
-    /**
-     * CV (1 step) + one pipeline step per test round (submitted or currently open).
-     * Final decision is added separately in getStepperSteps() — do not add it here.
-     */
-    private function resolveFreeApplicationAssessmentStepCount(ApplicationProgress $app): int
-    {
-        $submittedRounds = (int) $app->responses()->count();
-
-        $hasOpenRound = $app->test_id
-            && $app->status === 'in_progress'
-            && $app->level_status === 'in_progress'
-            && ! $app->responses()
-                ->where('level', $app->current_level)
-                ->exists();
-
-        $testRounds = $submittedRounds + ($hasOpenRound ? 1 : 0);
-
-        if ($app->status !== 'pending' && $testRounds < 1 && $app->test_id) {
-            $testRounds = 1;
-        }
-
-        return min(20, max(2, 1 + $testRounds));
-    }
-
     private function resolveConnectorLineState(string $stepState): string
     {
         return match ($stepState) {
@@ -742,19 +691,10 @@ class ApplicationSpace extends Page
      */
     private function buildTestStep(ApplicationProgress $app, int $offerStep): array
     {
-        $testNumber = max(1, $offerStep - 1);
-        $testIndex = $testNumber - 1;
+        $testNumber = ApplicationProgressStepMapper::testNumberFromOfferStep($offerStep);
+        $responseLevel = ApplicationProgressStepMapper::responseLevelFromOfferStep($offerStep);
 
-        $response = Response::query()
-            ->where('application_id', $app->id)
-            ->orderBy('level')
-            ->orderBy('id')
-            ->skip($testIndex)
-            ->first();
-
-        $responseLevel = $response
-            ? (int) $response->level
-            : max(1, (int) $app->current_level);
+        $response = ApplicationProgressStepMapper::resolveResponseForOfferStep($app, $offerStep);
 
         if ($app->status === 'pending') {
             return [
@@ -782,8 +722,7 @@ class ApplicationSpace extends Page
             && $app->test_id
             && $app->status === 'in_progress'
             && $app->level_status === 'in_progress'
-            && (int) $app->current_level === $responseLevel
-            && $testIndex === (int) $app->responses()->count();
+            && (int) $app->current_level === $responseLevel;
 
         if ($isAwaitingThisRound) {
             return [
@@ -831,7 +770,7 @@ class ApplicationSpace extends Page
         } elseif ($isCurrentOpenRound) {
             $state = 'current';
             $circleKey = 'candidate.applications.step_test_open';
-        } elseif ($hasResponse || $testIndex < (int) $app->responses()->count()) {
+        } elseif ($offerStep < ApplicationProgressStepMapper::offerStepFromResponseLevel((int) $app->current_level)) {
             $state = 'completed';
             $circleKey = 'candidate.applications.step_test_submitted';
         }

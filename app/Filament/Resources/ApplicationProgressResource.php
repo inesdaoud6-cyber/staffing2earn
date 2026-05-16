@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\ApplicationProgressResource\Pages;
 use App\Filament\Support\TableLayoutConfigurator;
 use App\Models\ApplicationProgress;
+use App\Support\ApplicationProgressStepMapper;
 use App\Models\Candidate;
 use App\Models\CandidateNotification;
 use App\Models\Offre;
@@ -125,13 +126,13 @@ class ApplicationProgressResource extends Resource
         if ($record->level_status === 'awaiting_approval') {
             return static::getUrl('review_level', [
                 'record' => $record,
-                'level' => max(1, (int) $record->current_level),
+                'level' => ApplicationProgressStepMapper::reviewPageStepForCurrentTestRound($record),
             ]);
         }
 
         return static::getUrl('review_level', [
             'record' => $record,
-            'level' => max(1, (int) $record->current_level),
+            'level' => ApplicationProgressStepMapper::reviewPageStepForCurrentTestRound($record),
         ]);
     }
 
@@ -682,38 +683,30 @@ class ApplicationProgressResource extends Resource
             return [];
         }
 
-        if ($record->isFreeApplication()) {
-            $maxLevel = min(20, max(
-                1,
-                (int) ($record->responses()->max('level') ?? 0),
-                (int) $record->current_level
-            ));
-        } else {
-            $maxFromOffer = (int) ($record->offre?->levels_count ?? 1);
-            $maxFromResponses = (int) ($record->responses()->max('level') ?? 1);
-            $maxLevel = min(20, max(1, $maxFromOffer, $maxFromResponses));
-        }
+        $assessmentTotal = ApplicationProgressStepMapper::assessmentStepCount($record);
+        $responseLevels = $record->responses()->pluck('level')->map(fn ($l) => (int) $l)->all();
 
         $items = [];
 
-        $responseLevels = $record->responses()->pluck('level')->map(fn ($l) => (int) $l)->all();
+        for ($offerStep = 1; $offerStep <= $assessmentTotal; $offerStep++) {
+            if (ApplicationProgressStepMapper::isCvOfferStep($offerStep)) {
+                $label = __('admin.application_review_nav_level_1');
+            } else {
+                $testNumber = ApplicationProgressStepMapper::testNumberFromOfferStep($offerStep);
+                $responseLevel = ApplicationProgressStepMapper::responseLevelFromOfferStep($offerStep);
+                $hasResponse = in_array($responseLevel, $responseLevels, true);
+                $label = $hasResponse
+                    ? __('admin.application_review_nav_level_test', ['n' => (string) $testNumber])
+                    : __('admin.application_review_nav_level_n', ['n' => (string) $testNumber]);
+            }
 
-        for ($level = 1; $level <= $maxLevel; $level++) {
-            $lv = $level;
-            $hasResponse = in_array($lv, $responseLevels, true);
-            $label = $lv === 1 && ! $hasResponse
-                ? __('admin.application_review_nav_level_1')
-                : ($hasResponse
-                    ? __('admin.application_review_nav_level_test', ['n' => (string) $lv])
-                    : __('admin.application_review_nav_level_n', ['n' => $lv]));
-
-            $items[] = NavigationItem::make('review-'.$lv)
+            $items[] = NavigationItem::make('review-step-'.$offerStep)
                 ->label($label)
                 ->icon('heroicon-o-clipboard-document-check')
-                ->url(static::getUrl('review_level', ['record' => $record, 'level' => $lv]))
-                ->isActiveWhen(function () use ($page, $lv): bool {
+                ->url(static::getUrl('review_level', ['record' => $record, 'level' => $offerStep]))
+                ->isActiveWhen(function () use ($page, $offerStep): bool {
                     return $page instanceof Pages\ReviewApplicationLevel
-                        && $page->reviewLevel === $lv;
+                        && $page->reviewLevel === $offerStep;
                 });
         }
 

@@ -11,6 +11,7 @@ use App\Models\Response;
 use App\Models\Test;
 use App\Services\FreeApplicationWorkflow;
 use App\Services\TestScoringService;
+use App\Support\ApplicationProgressStepMapper;
 use Filament\Actions\Action;
 use Filament\Forms;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -44,7 +45,11 @@ class ReviewApplicationLevel extends Page implements HasForms
     public function mount(int|string $record, string|int $level): void
     {
         $this->record = $this->resolveRecord($record);
-        $this->reviewLevel = max(1, min(20, (int) $level));
+        $requested = max(1, min(20, (int) $level));
+        $this->reviewLevel = ApplicationProgressStepMapper::normalizeReviewPageStep(
+            $this->record,
+            $requested
+        );
 
         abort_unless(static::getResource()::canEdit($this->record), 403);
 
@@ -61,13 +66,13 @@ class ReviewApplicationLevel extends Page implements HasForms
             ?? $this->record->candidate?->full_name
             ?? __('Application');
 
-        if ($this->showsCvSection() && ! $this->hasResponseForReviewLevel()) {
+        if ($this->showsCvSection()) {
             return __('admin.application_review_page_title_cv', ['name' => $name]);
         }
 
         return __('admin.application_review_page_title_test', [
             'name' => $name,
-            'level' => (string) $this->reviewLevel,
+            'level' => (string) ApplicationProgressStepMapper::testNumberFromOfferStep($this->reviewLevel),
         ]);
     }
 
@@ -85,7 +90,9 @@ class ReviewApplicationLevel extends Page implements HasForms
                     ->columns(1)
                     ->visible(fn (): bool => $this->showsCvSection()),
                 Forms\Components\Section::make(__('admin.application_test_answers_section'))
-                    ->description(__('admin.application_test_answers_level_hint', ['level' => (string) $this->reviewLevel]))
+                    ->description(__('admin.application_test_answers_level_hint', [
+                        'level' => (string) ApplicationProgressStepMapper::testNumberFromOfferStep($this->reviewLevel),
+                    ]))
                     ->schema([
                         Forms\Components\Placeholder::make('test_score_summary')
                             ->label(__('admin.test_score'))
@@ -149,38 +156,29 @@ class ReviewApplicationLevel extends Page implements HasForms
      */
     private function resolveResponseForReviewLevel(): ?Response
     {
-        $byLevel = Response::query()
-            ->where('application_id', $this->record->id)
-            ->where('level', $this->reviewLevel)
-            ->first();
-
-        if ($byLevel) {
-            return $byLevel;
-        }
-
-        if ($this->reviewLevel <= 1) {
-            return null;
-        }
-
-        $testIndex = $this->reviewLevel - 1;
-
-        return Response::query()
-            ->where('application_id', $this->record->id)
-            ->orderBy('level')
-            ->orderBy('id')
-            ->skip($testIndex)
-            ->first();
+        return ApplicationProgressStepMapper::resolveResponseForOfferStep(
+            $this->record,
+            $this->reviewLevel
+        );
     }
 
     private function responseLevelForScoring(): int
     {
-        return (int) ($this->resolveResponseForReviewLevel()?->level ?? $this->reviewLevel);
+        return ApplicationProgressStepMapper::responseLevelFromOfferStep($this->reviewLevel);
+    }
+
+    private function resolveTestForReviewStep(): ?Test
+    {
+        return ApplicationProgressStepMapper::resolveTestForOfferStep(
+            $this->record,
+            $this->reviewLevel
+        );
     }
 
     private function getTestScoreSummaryHtml(): HtmlString
     {
         $response = $this->resolveResponseForReviewLevel();
-        $test = $this->record->test;
+        $test = $this->resolveTestForReviewStep();
 
         if (! $response || $test === null) {
             return new HtmlString('<p class="text-sm text-gray-500">—</p>');
@@ -223,7 +221,7 @@ class ReviewApplicationLevel extends Page implements HasForms
     private function ensureReviewQuestionResponses(): void
     {
         $response = $this->resolveResponseForReviewLevel();
-        $test = $this->record->test;
+        $test = $this->resolveTestForReviewStep();
 
         if (! $response || ! $test) {
             return;
@@ -239,7 +237,7 @@ class ReviewApplicationLevel extends Page implements HasForms
     private function buildTestReviewFormData(): array
     {
         $response = $this->resolveResponseForReviewLevel();
-        $test = $this->record->test;
+        $test = $this->resolveTestForReviewStep();
 
         if (! $response || ! $test) {
             return ['level_review_items' => []];
@@ -570,20 +568,12 @@ class ReviewApplicationLevel extends Page implements HasForms
 
     private function showsCvSection(): bool
     {
-        if ($this->reviewLevel !== 1) {
-            return false;
-        }
-
-        if ($this->record->status === 'pending') {
-            return true;
-        }
-
-        return $this->record->isAwaitingTestAssignment();
+        return ApplicationProgressStepMapper::isCvOfferStep($this->reviewLevel);
     }
 
     private function showsTestSection(): bool
     {
-        return $this->reviewLevel > 1 || $this->hasResponseForReviewLevel();
+        return ! ApplicationProgressStepMapper::isCvOfferStep($this->reviewLevel);
     }
 
     private function canAssignTestOnThisPage(): bool
@@ -592,7 +582,8 @@ class ReviewApplicationLevel extends Page implements HasForms
             return false;
         }
 
-        return $this->record->isAwaitingTestAssignment() && $this->reviewLevel === 1;
+        return $this->record->isAwaitingTestAssignment()
+            && ApplicationProgressStepMapper::isCvOfferStep($this->reviewLevel);
     }
 
     private function canAssignTestAfterReview(): bool
@@ -622,7 +613,7 @@ class ReviewApplicationLevel extends Page implements HasForms
         if (! $this->hasResponseForReviewLevel()) {
             return false;
         }
-        if ($this->record->current_level !== $this->responseLevelForScoring()) {
+        if ((int) $this->record->current_level !== $this->responseLevelForScoring()) {
             return false;
         }
         if ($this->record->level_status !== 'awaiting_approval') {
@@ -637,7 +628,7 @@ class ReviewApplicationLevel extends Page implements HasForms
         if ($this->record->status !== 'in_progress') {
             return false;
         }
-        if ($this->record->current_level !== $this->responseLevelForScoring()) {
+        if ((int) $this->record->current_level !== $this->responseLevelForScoring()) {
             return false;
         }
         if ($this->record->level_status !== 'awaiting_approval') {
