@@ -821,3 +821,17 @@
 .fi-resource-groups .fi-ta-header-toolbar {
     display: none !important;
 }
+
+/* ---------- Questions list: custom toolbar row (search + level + type filters) ---------- */
+.fi-resource-questions .fi-ta-content > .flex.items-center.gap-x-6.bg-gray-50 {
+    display: none !important;
+}
+
+.fi-resource-questions .fi-ta-filters-above-content-ctn,
+.fi-resource-questions .fi-ta-header-toolbar .fi-ta-filters-trigger {
+    display: none !important;
+}
+
+.fi-resource-questions .fi-ta-header-toolbar {
+    display: none !important;
+}

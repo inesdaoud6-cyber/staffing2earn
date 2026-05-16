@@ -11,6 +11,7 @@ use App\Observers\OffreObserver;
 use Filament\Http\Responses\Auth\Contracts\LogoutResponse as LogoutResponseContract;
 use App\Filament\Resources\BlockResource\Pages\ListBlocks;
 use App\Filament\Resources\GroupResource\Pages\ListGroups;
+use App\Filament\Resources\QuestionResource\Pages\ListQuestions;
 use Filament\Support\Facades\FilamentView;
 use Filament\Tables\View\TablesRenderHook;
 use Filament\View\PanelsRenderHook;
@@ -68,11 +69,16 @@ class AppServiceProvider extends ServiceProvider
                     return View::make('filament.resources.groups-list-toolbar')->render();
                 }
 
+                if ($current instanceof ListQuestions) {
+                    return View::make('filament.resources.questions-list-toolbar')->render();
+                }
+
                 return '';
             },
             scopes: [
                 \App\Filament\Resources\UserResource::class,
                 \App\Filament\Resources\GroupResource::class,
+                \App\Filament\Resources\QuestionResource::class,
             ],
         );
     }
