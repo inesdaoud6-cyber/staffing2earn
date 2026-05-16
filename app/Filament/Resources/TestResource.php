@@ -7,13 +7,17 @@ use App\Models\Block;
 use App\Models\Group;
 use App\Models\Question;
 use App\Models\Test;
+use App\Support\QuestionFormOptions;
 use Filament\Forms;
+use Filament\Forms\Components\Actions;
+use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 
@@ -88,7 +92,7 @@ class TestResource extends Resource
                     ->label(__('test.blocks_repeater_label'))
                     ->helperText(__('test.blocks_section_help'))
                     ->schema([
-                        Forms\Components\Grid::make(2)->schema([
+                        Forms\Components\Grid::make(['default' => 2, 'lg' => 4])->schema([
                             Forms\Components\Select::make('block_id')
                                 ->label(__('test.filter-block'))
                                 ->options(
@@ -103,6 +107,8 @@ class TestResource extends Resource
                                 ->live(debounce: 0)
                                 ->afterStateUpdated(function (Set $set): void {
                                     $set('group_id', null);
+                                    $set('component_filter', null);
+                                    $set('level_filter', null);
                                     $set('question_ids', []);
                                 }),
                             Forms\Components\Select::make('group_id')
@@ -130,6 +136,29 @@ class TestResource extends Resource
                                 ->searchable(false)
                                 ->native(true)
                                 ->live(debounce: 0)
+                                ->disabled(fn (Get $get): bool => ! filled($get('block_id')))
+                                ->afterStateUpdated(function (Set $set): void {
+                                    $set('component_filter', null);
+                                    $set('level_filter', null);
+                                    $set('question_ids', []);
+                                }),
+                            Forms\Components\Select::make('component_filter')
+                                ->label(__('admin.filter_type'))
+                                ->placeholder(__('admin.filter_all_types'))
+                                ->options(fn (): array => QuestionFormOptions::componentOptions())
+                                ->searchable(false)
+                                ->native(true)
+                                ->live(debounce: 0)
+                                ->disabled(fn (Get $get): bool => ! filled($get('block_id')) || ! filled($get('group_id')))
+                                ->afterStateUpdated(fn (Set $set) => $set('question_ids', [])),
+                            Forms\Components\Select::make('level_filter')
+                                ->label(__('admin.filter_level'))
+                                ->placeholder(__('admin.filter_all_levels'))
+                                ->options(fn (Get $get): array => static::assignmentLevelFilterOptions($get))
+                                ->searchable(false)
+                                ->native(true)
+                                ->live(debounce: 0)
+                                ->disabled(fn (Get $get): bool => ! filled($get('block_id')) || ! filled($get('group_id')))
                                 ->afterStateUpdated(fn (Set $set) => $set('question_ids', [])),
                         ]),
                         Forms\Components\Placeholder::make('pick_group_first')
@@ -142,36 +171,29 @@ class TestResource extends Resource
                             ->visible(fn (Get $get): bool => filled($get('block_id'))
                                 && ! filled($get('group_id')))
                             ->columnSpanFull(),
+                        Actions::make([
+                            Action::make('select_all_questions')
+                                ->label(__('filament-forms::components.checkbox_list.actions.select_all.label'))
+                                ->link()
+                                ->action(fn (Set $set, Get $get) => $set(
+                                    'question_ids',
+                                    static::assignmentQuestionIdsForSelection($get)
+                                )),
+                            Action::make('deselect_all_questions')
+                                ->label(__('filament-forms::components.checkbox_list.actions.deselect_all.label'))
+                                ->link()
+                                ->color('gray')
+                                ->action(fn (Set $set) => $set('question_ids', [])),
+                        ])
+                            ->visible(fn (Get $get): bool => filled($get('block_id')) && filled($get('group_id')))
+                            ->columnSpanFull(),
                         Forms\Components\CheckboxList::make('question_ids')
                             ->label(__('test.selectionner-questions'))
-                            ->options(function (Get $get): array {
-                                $blockId = $get('block_id');
-                                $groupFilter = $get('group_id');
-                                if (! $blockId || $groupFilter === null || $groupFilter === '') {
-                                    return [];
-                                }
-
-                                $q = Question::query()->where('block_id', $blockId);
-                                if ($groupFilter === self::GROUP_DIRECT_VALUE) {
-                                    $q->whereNull('group_id');
-                                } else {
-                                    $q->where('group_id', $groupFilter);
-                                }
-
-                                return $q->orderBy('level')
-                                    ->orderBy('id')
-                                    ->get()
-                                    ->mapWithKeys(fn (Question $question) => [
-                                        $question->id => Str::limit((string) $question->question_fr, 90),
-                                    ])
-                                    ->all();
-                            })
+                            ->options(fn (Get $get): array => static::assignmentQuestionOptions($get))
                             ->visible(fn (Get $get): bool => filled($get('block_id')) && filled($get('group_id')))
-                            ->bulkToggleable()
                             ->columns(1)
                             ->gridDirection('row')
                             ->default([])
-                            ->live(debounce: 0)
                             ->helperText(__('test.test-form-questions-hint')),
                     ])
                     ->addActionLabel(__('test.add-block'))
@@ -201,6 +223,86 @@ class TestResource extends Resource
                     }),
             ]),
         ]);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function assignmentQuestionOptions(Get $get): array
+    {
+        $query = static::assignmentQuestionsQuery($get);
+        if (! $query) {
+            return [];
+        }
+
+        return $query
+            ->orderBy('level')
+            ->orderBy('id')
+            ->get()
+            ->mapWithKeys(fn (Question $question) => [
+                (string) $question->id => Str::limit((string) $question->question_fr, 90),
+            ])
+            ->all();
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function assignmentQuestionIdsForSelection(Get $get): array
+    {
+        return array_keys(static::assignmentQuestionOptions($get));
+    }
+
+    /**
+     * @return array<int|string, int|string>
+     */
+    public static function assignmentLevelFilterOptions(Get $get): array
+    {
+        $query = static::assignmentQuestionsQuery($get, applyComponentFilter: false, applyLevelFilter: false);
+        if (! $query) {
+            return [];
+        }
+
+        return $query
+            ->clone()
+            ->select('level')
+            ->distinct()
+            ->orderBy('level')
+            ->pluck('level', 'level')
+            ->all();
+    }
+
+    /**
+     * Questions available for the current block / group / type / level filters in a repeater row.
+     */
+    public static function assignmentQuestionsQuery(
+        Get $get,
+        bool $applyComponentFilter = true,
+        bool $applyLevelFilter = true,
+    ): ?Builder {
+        $blockId = $get('block_id');
+        $groupFilter = $get('group_id');
+        if (! $blockId || $groupFilter === null || $groupFilter === '') {
+            return null;
+        }
+
+        $query = Question::query()->where('block_id', $blockId);
+
+        if ($groupFilter === self::GROUP_DIRECT_VALUE) {
+            $query->whereNull('group_id');
+        } else {
+            $query->where('group_id', $groupFilter);
+        }
+
+        if ($applyComponentFilter && filled($get('component_filter'))) {
+            $query->where('component', $get('component_filter'));
+        }
+
+        if ($applyLevelFilter && filled($get('level_filter'))) {
+            $query->where('level', (int) $get('level_filter'));
+        }
+
+        return $query;
     }
 
     /**
@@ -234,7 +336,7 @@ class TestResource extends Resource
                 ];
             }
 
-            $rowsByKey[$rowKey]['question_ids'][] = (int) $question->id;
+            $rowsByKey[$rowKey]['question_ids'][] = (string) $question->id;
         }
 
         $rows = array_values($rowsByKey);
