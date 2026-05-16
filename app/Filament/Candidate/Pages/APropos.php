@@ -13,9 +13,9 @@ class APropos extends Page
     protected static ?string $navigationIcon = 'heroicon-o-information-circle';
     protected static string $view = 'filament.candidate.pages.a-propos';
     protected static ?string $slug = 'a-propos';
-    protected static ?int $navigationSort = 7;
+    protected static ?int $navigationSort = 1;
 
-    protected static ?string $navigationGroup = 'candidate.account';
+    protected static ?string $navigationGroup = 'candidate.footer';
 
     public function getTitle(): string
     {

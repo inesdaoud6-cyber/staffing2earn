@@ -50,11 +50,11 @@ class CandidatePanelProvider extends PanelProvider
                 fn () => view('filament.partials.sidebar-user-card')
             )
             ->navigationGroups([
-                NavigationGroup::make('candidate.main')
+                'candidate.main' => NavigationGroup::make()
                     ->label(fn () => __('nav.candidate_menu')),
-                NavigationGroup::make('candidate.account')
+                'candidate.account' => NavigationGroup::make()
                     ->label(fn () => __('nav.account_management')),
-                NavigationGroup::make('candidate.footer')
+                'candidate.footer' => NavigationGroup::make()
                     ->label(''),
             ])
             ->userMenuItems([
