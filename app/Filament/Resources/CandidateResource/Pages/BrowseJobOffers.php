@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\CandidateResource\Pages;
 
+use App\Filament\Concerns\InteractsWithTableLayout;
 use App\Filament\Resources\CandidateResource;
+use App\Filament\Resources\OffreResource;
 use App\Models\Offre;
 use Filament\Resources\Pages\Page;
 use Filament\Tables;
@@ -12,6 +14,7 @@ use Illuminate\Contracts\Support\Htmlable;
 
 class BrowseJobOffers extends Page implements HasTable
 {
+    use InteractsWithTableLayout;
     use Tables\Concerns\InteractsWithTable;
 
     protected static string $resource = CandidateResource::class;
@@ -20,6 +23,7 @@ class BrowseJobOffers extends Page implements HasTable
 
     public function mount(): void
     {
+        $this->initializeTableLayout();
         $this->mountInteractsWithTable();
     }
 
@@ -30,36 +34,24 @@ class BrowseJobOffers extends Page implements HasTable
 
     public function table(Table $table): Table
     {
-        return $table
-            ->query(
-                Offre::query()
-                    ->withCount([
-                        'applicationProgresses as candidates_count' => fn ($query) => $query->where('status', '!=', 'cancelled'),
-                    ])
-            )
-            ->columns([
-                Tables\Columns\TextColumn::make('title')
-                    ->label(__('nav.job_offer'))
-                    ->searchable()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('candidates_count')
-                    ->label(__('nav.candidates'))
-                    ->alignEnd()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('deadline')
-                    ->label(__('admin.deadline'))
-                    ->date('d/m/Y')
-                    ->placeholder('—')
-                    ->sortable(),
-            ])
-            ->recordUrl(fn (Offre $record): string => CandidateResource::getUrl('by_offer', ['offre' => $record->getKey()]))
-            ->emptyStateHeading(__('admin.candidate_no_offers'))
-            ->emptyStateDescription(__('admin.candidate_no_offers_desc'))
-            ->defaultSort('title');
+        return OffreResource::configureCandidateOffersHubTable(
+            $table
+                ->query(
+                    Offre::query()
+                        ->withCount([
+                            'applicationProgresses as applications_count' => fn ($query) => $query->where('status', '!=', 'cancelled'),
+                        ])
+                )
+                ->recordUrl(fn (Offre $record): string => CandidateResource::getUrl('by_offer', ['offre' => $record->getKey()]))
+                ->emptyStateHeading(__('admin.candidate_no_offers'))
+                ->emptyStateDescription(__('admin.candidate_no_offers_desc'))
+                ->defaultSort('title'),
+            $this->tableLayout,
+        );
     }
 
     protected function getHeaderActions(): array
     {
-        return [];
+        return $this->getTableLayoutToggleActions();
     }
 }

@@ -6,7 +6,7 @@ use App\Filament\Resources\QuestionResource;
 use App\Models\Question;
 use App\Support\QuestionFormOptions;
 use Filament\Actions;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Resources\Pages\ListRecords;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Url;
@@ -62,7 +62,7 @@ class ListQuestions extends ListRecords
 
     public function table(Table $table): Table
     {
-        return QuestionResource::table($table)
+        return parent::table($table)
             ->filters([])
             ->modifyQueryUsing(function (Builder $query): Builder {
                 if (filled($this->levelFilter)) {

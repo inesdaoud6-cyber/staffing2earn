@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\TemoignageResource\Pages;
+use App\Filament\Support\TableLayoutConfigurator;
 use App\Models\Temoignage;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -57,11 +58,19 @@ class TemoignageResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->columns([
+        return self::configureTable($table);
+    }
+
+    public static function configureTable(Table $table, string $layout = TableLayoutConfigurator::LAYOUT_LIST): Table
+    {
+        return TableLayoutConfigurator::apply(
+            $table,
+            $layout,
+            [
                 Tables\Columns\TextColumn::make('candidate_name')
                     ->label(__('admin.full_name'))
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('content')
                     ->label(__('admin.content'))
                     ->limit(60),
@@ -73,8 +82,36 @@ class TemoignageResource extends Resource
                     ->boolean(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label(__('Date'))
-                    ->dateTime('d/m/Y'),
-            ])
+                    ->dateTime('d/m/Y')
+                    ->sortable(),
+            ],
+            [
+                TableLayoutConfigurator::cardStack([
+                    Tables\Columns\TextColumn::make('candidate_name')
+                        ->label(__('admin.full_name'))
+                        ->searchable()
+                        ->weight('bold'),
+                    Tables\Columns\TextColumn::make('content')
+                        ->label(__('admin.content'))
+                        ->limit(120)
+                        ->color('gray')
+                        ->size('sm'),
+                    Tables\Columns\Layout\Split::make([
+                        Tables\Columns\TextColumn::make('rating')
+                            ->label(__('admin.rating'))
+                            ->badge(),
+                        Tables\Columns\IconColumn::make('is_published')
+                            ->label(__('admin.published'))
+                            ->boolean(),
+                    ]),
+                    Tables\Columns\TextColumn::make('created_at')
+                        ->label(__('Date'))
+                        ->dateTime('d/m/Y')
+                        ->color('gray')
+                        ->size('sm'),
+                ]),
+            ],
+        )
             ->actions([
                 Tables\Actions\EditAction::make()->label(__('Edit')),
                 Tables\Actions\DeleteAction::make()->label(__('admin.delete')),

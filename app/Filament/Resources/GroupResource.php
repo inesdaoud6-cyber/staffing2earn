@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\GroupResource\Pages;
+use App\Filament\Support\TableLayoutConfigurator;
 use App\Models\Block;
 use App\Models\Group;
 use Filament\Forms;
@@ -54,16 +55,34 @@ class GroupResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->modifyQueryUsing(
+        return self::configureTable($table);
+    }
+
+    public static function configureTable(Table $table, string $layout = TableLayoutConfigurator::LAYOUT_LIST): Table
+    {
+        return TableLayoutConfigurator::apply(
+            $table->modifyQueryUsing(
                 fn (Builder $query): Builder => $query->withCount('questions')
-            )
-            ->contentGrid([
-                'md' => 2,
-                'xl' => 4,
-            ])
-            ->columns([
-                Tables\Columns\Layout\Stack::make([
+            ),
+            $layout,
+            [
+                Tables\Columns\TextColumn::make('name')
+                    ->label(__('admin.group_name'))
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('block.name')
+                    ->label(__('admin.block'))
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('questions_count')
+                    ->label(__('admin.questions_count'))
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('description')
+                    ->label(__('admin.description'))
+                    ->limit(50)
+                    ->toggleable(),
+            ],
+            [
+                TableLayoutConfigurator::cardStack([
                     Tables\Columns\Layout\Split::make([
                         Tables\Columns\TextColumn::make('name')
                             ->label(__('admin.group_name'))
@@ -85,8 +104,10 @@ class GroupResource extends Resource
                             ->color('gray')
                             ->size('sm'),
                     ]),
-                ])->space(1),
-            ])
+                ], 1),
+            ],
+            ['md' => 2, 'xl' => 4],
+        )
             ->defaultSort('name')
             ->filters([])
             ->actions([

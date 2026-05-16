@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\QuestionResource\Pages;
+use App\Filament\Support\TableLayoutConfigurator;
 use App\Models\Block;
 use App\Models\Group;
 use App\Models\Question;
@@ -177,23 +178,52 @@ class QuestionResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->defaultPaginationPageOption(12)
-            ->paginationPageOptions([12, 24, 48])
-            ->contentGrid([
-                'md' => 2,
-                'xl' => 3,
-            ])
-            ->columns([
-                Tables\Columns\Layout\Stack::make([
-                    Tables\Columns\Layout\Stack::make([
-                        Tables\Columns\TextColumn::make('question_fr')
-                            ->label(__('admin.question'))
-                            ->limit(80)
-                            ->searchable()
-                            ->weight('bold')
-                            ->size('sm'),
-                    ]),
+        return self::configureTable($table);
+    }
+
+    public static function configureTable(Table $table, string $layout = TableLayoutConfigurator::LAYOUT_LIST): Table
+    {
+        return TableLayoutConfigurator::apply(
+            $table
+                ->defaultPaginationPageOption(12)
+                ->paginationPageOptions([12, 24, 48]),
+            $layout,
+            [
+                Tables\Columns\TextColumn::make('question_fr')
+                    ->label(__('admin.question'))
+                    ->limit(80)
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('component')
+                    ->label(__('admin.type'))
+                    ->formatStateUsing(fn (string $state): string => QuestionFormOptions::componentOptions()[$state] ?? $state)
+                    ->badge()
+                    ->color('info'),
+                Tables\Columns\TextColumn::make('level')
+                    ->label(__('Level'))
+                    ->badge()
+                    ->color('warning')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('classification')
+                    ->label(__('admin.classification'))
+                    ->badge()
+                    ->toggleable(),
+                Tables\Columns\IconColumn::make('scorable')
+                    ->label(__('admin.scored'))
+                    ->boolean()
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('block.name')
+                    ->label(__('admin.block'))
+                    ->toggleable(),
+            ],
+            [
+                TableLayoutConfigurator::cardStack([
+                    Tables\Columns\TextColumn::make('question_fr')
+                        ->label(__('admin.question'))
+                        ->limit(80)
+                        ->searchable()
+                        ->weight('bold')
+                        ->size('sm'),
                     Tables\Columns\Layout\Split::make([
                         Tables\Columns\TextColumn::make('component')
                             ->label(__('admin.type'))
@@ -218,7 +248,7 @@ class QuestionResource extends Resource
                             ->label('Auto')
                             ->boolean(),
                         Tables\Columns\TextColumn::make('block.name')
-                            ->label('Block')
+                            ->label(__('admin.block'))
                             ->badge()
                             ->color('gray'),
                     ]),
@@ -228,8 +258,9 @@ class QuestionResource extends Resource
                         ->color('success')
                         ->separator(',')
                         ->placeholder(__('admin.no_test')),
-                ])->space(2),
-            ])
+                ]),
+            ],
+        )
             ->actions([
                 Tables\Actions\EditAction::make()->label(__('Edit')),
                 Tables\Actions\DeleteAction::make()->label(__('admin.delete')),

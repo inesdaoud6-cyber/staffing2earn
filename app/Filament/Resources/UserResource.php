@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
+use App\Filament\Support\TableLayoutConfigurator;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -114,12 +115,19 @@ class UserResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->modifyQueryUsing(fn ($query) => $query->with(['roles', 'candidate']))
-            ->hiddenFilterIndicators()
-            ->searchDebounce('150ms')
-            ->searchPlaceholder(__('admin.search_users_placeholder'))
-            ->columns([
+        return self::configureTable($table);
+    }
+
+    public static function configureTable(Table $table, string $layout = TableLayoutConfigurator::LAYOUT_LIST): Table
+    {
+        return TableLayoutConfigurator::apply(
+            $table
+                ->modifyQueryUsing(fn ($query) => $query->with(['roles', 'candidate']))
+                ->hiddenFilterIndicators()
+                ->searchDebounce('150ms')
+                ->searchPlaceholder(__('admin.search_users_placeholder')),
+            $layout,
+            [
                 Tables\Columns\TextColumn::make('name')
                     ->label(__('admin.full_name'))
                     ->searchable()
@@ -145,7 +153,38 @@ class UserResource extends Resource
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-            ])
+            ],
+            [
+                TableLayoutConfigurator::cardStack([
+                    Tables\Columns\TextColumn::make('name')
+                        ->label(__('admin.full_name'))
+                        ->searchable()
+                        ->weight(FontWeight::Bold),
+                    Tables\Columns\TextColumn::make('email')
+                        ->label(__('Email'))
+                        ->icon('heroicon-o-envelope')
+                        ->color('gray')
+                        ->size('sm'),
+                    Tables\Columns\TextColumn::make('roles.name')
+                        ->label(__('admin.user_role'))
+                        ->badge()
+                        ->formatStateUsing(fn (?string $state): string => match ($state) {
+                            'admin'     => __('nav.role_admin'),
+                            'candidate' => __('nav.role_candidate'),
+                            default     => $state ?? '—',
+                        })
+                        ->color(fn (?string $state): string => match ($state) {
+                            'admin' => 'danger',
+                            default => 'gray',
+                        }),
+                    Tables\Columns\TextColumn::make('created_at')
+                        ->label(__('Date'))
+                        ->dateTime('d/m/Y H:i')
+                        ->color('gray')
+                        ->size('sm'),
+                ]),
+            ],
+        )
             ->searchable(false)
             ->defaultSort('created_at', 'desc')
             ->actions([

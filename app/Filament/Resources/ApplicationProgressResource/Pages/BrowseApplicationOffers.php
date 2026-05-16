@@ -2,10 +2,12 @@
 
 namespace App\Filament\Resources\ApplicationProgressResource\Pages;
 
+use App\Filament\Concerns\InteractsWithTableLayout;
 use App\Filament\Resources\ApplicationProgressResource;
+use App\Filament\Resources\OffreResource;
+use App\Models\ApplicationProgress;
 use App\Models\Offre;
 use Filament\Actions\Action;
-use Filament\Resources\Concerns\HasTabs;
 use Filament\Resources\Pages\Page;
 use Filament\Tables;
 use Filament\Tables\Contracts\HasTable;
@@ -14,6 +16,7 @@ use Illuminate\Contracts\Support\Htmlable;
 
 class BrowseApplicationOffers extends Page implements HasTable
 {
+    use InteractsWithTableLayout;
     use Tables\Concerns\InteractsWithTable;
 
     protected static string $resource = ApplicationProgressResource::class;
@@ -22,6 +25,7 @@ class BrowseApplicationOffers extends Page implements HasTable
 
     public function mount(): void
     {
+        $this->initializeTableLayout();
         $this->mountInteractsWithTable();
     }
 
@@ -47,51 +51,32 @@ class BrowseApplicationOffers extends Page implements HasTable
 
     public function table(Table $table): Table
     {
-        return $table
-            ->query(
-                Offre::query()
-                    ->withCount([
-                        'applicationProgresses as applications_count' => fn ($query) => $query->where('status', '!=', 'cancelled'),
-                    ])
-            )
-            ->columns([
-                Tables\Columns\TextColumn::make('title')
-                    ->label(__('nav.job_offer'))
-                    ->searchable()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('domain')
-                    ->label(__('admin.domain'))
-                    ->placeholder('—')
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\IconColumn::make('is_published')
-                    ->label(__('admin.application_offer_published'))
-                    ->boolean(),
-                Tables\Columns\TextColumn::make('applications_count')
-                    ->label(__('admin.application_offer_applications_count'))
-                    ->alignEnd()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('deadline')
-                    ->label(__('admin.deadline'))
-                    ->date('d/m/Y')
-                    ->placeholder('—')
-                    ->sortable(),
-            ])
-            ->recordUrl(fn (Offre $record): string => ApplicationProgressResource::getUrl('by_offer', ['offre' => $record->getKey()]))
-            ->actions([
-                Tables\Actions\Action::make('viewApplications')
-                    ->label(__('admin.application_view_offer_applications'))
-                    ->icon('heroicon-o-arrow-right')
-                    ->button()
-                    ->url(fn (Offre $record): string => ApplicationProgressResource::getUrl('by_offer', ['offre' => $record->getKey()])),
-            ])
-            ->defaultSort('title');
+        return OffreResource::configureOffersHubTable(
+            $table
+                ->query(
+                    Offre::query()
+                        ->withCount([
+                            'applicationProgresses as applications_count' => fn ($query) => $query->where('status', '!=', 'cancelled'),
+                        ])
+                )
+                ->recordUrl(fn (Offre $record): string => ApplicationProgressResource::getUrl('by_offer', ['offre' => $record->getKey()]))
+                ->actions([
+                    Tables\Actions\Action::make('viewApplications')
+                        ->label(__('admin.application_view_offer_applications'))
+                        ->icon('heroicon-o-arrow-right')
+                        ->button()
+                        ->url(fn (Offre $record): string => ApplicationProgressResource::getUrl('by_offer', ['offre' => $record->getKey()])),
+                ])
+                ->defaultSort('title'),
+            $this->tableLayout,
+        );
     }
 
     protected function getHeaderActions(): array
     {
         $awaiting = $this->getFreeApplicationStats()['awaiting_review'];
 
-        return [
+        return $this->prependTableLayoutToggleActions([
             Action::make('manageFree')
                 ->label(__('admin.application_manage_free'))
                 ->icon('heroicon-o-inbox')
@@ -102,6 +87,6 @@ class BrowseApplicationOffers extends Page implements HasTable
                 ->label(__('Create').' '.ApplicationProgressResource::getModelLabel())
                 ->icon('heroicon-o-plus')
                 ->url(ApplicationProgressResource::getUrl('create')),
-        ];
+        ]);
     }
 }

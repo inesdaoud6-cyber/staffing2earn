@@ -6,20 +6,16 @@ use App\Filament\Resources\ApplicationProgressResource;
 use App\Models\Offre;
 use Filament\Actions\Action;
 use Filament\Resources\Components\Tab;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Resources\Pages\ListRecords;
 use Filament\Tables\Table;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
-use Livewire\Attributes\Url;
 
 class ListApplicationProgress extends ListRecords
 {
     protected static string $resource = ApplicationProgressResource::class;
 
     public string $offre = '';
-
-    #[Url(as: 'layout', history: true)]
-    public string $applicationsTableLayout = 'list';
 
     public function mount(): void
     {
@@ -28,10 +24,6 @@ class ListApplicationProgress extends ListRecords
         $this->assertOffreRouteIsValid();
 
         parent::mount();
-
-        if (! in_array($this->applicationsTableLayout, ['list', 'cards'], true)) {
-            $this->applicationsTableLayout = 'list';
-        }
     }
 
     public function getTitle(): string|Htmlable
@@ -58,7 +50,7 @@ class ListApplicationProgress extends ListRecords
 
     public function table(Table $table): Table
     {
-        return ApplicationProgressResource::configureTable($table, $this->applicationsTableLayout)
+        return ApplicationProgressResource::configureTable($table, $this->tableLayout)
             ->modifyQueryUsing(function (Builder $query): Builder {
                 if ($this->offre === 'libre') {
                     return $query->whereNull('offre_id');
@@ -70,25 +62,13 @@ class ListApplicationProgress extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [
+        return $this->appendTableLayoutToggleActions([
             Action::make('back_to_offers')
                 ->label(__('admin.application_back_to_hub'))
                 ->icon('heroicon-o-arrow-left')
                 ->url(ApplicationProgressResource::getUrl('index'))
                 ->color('gray'),
-            Action::make('layout_list')
-                ->label(__('admin.applications_view_list'))
-                ->icon('heroicon-o-bars-3')
-                ->color(fn (): string => $this->applicationsTableLayout === 'list' ? 'primary' : 'gray')
-                ->outlined(fn (): bool => $this->applicationsTableLayout !== 'list')
-                ->action(fn () => $this->applicationsTableLayout = 'list'),
-            Action::make('layout_cards')
-                ->label(__('admin.applications_view_cards'))
-                ->icon('heroicon-o-squares-2x2')
-                ->color(fn (): string => $this->applicationsTableLayout === 'cards' ? 'primary' : 'gray')
-                ->outlined(fn (): bool => $this->applicationsTableLayout !== 'cards')
-                ->action(fn () => $this->applicationsTableLayout = 'cards'),
-        ];
+        ]);
     }
 
     private function assertOffreRouteIsValid(): void

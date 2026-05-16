@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\BlockResource\Pages;
+use App\Filament\Support\TableLayoutConfigurator;
 use App\Models\Block;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -37,13 +38,31 @@ class BlockResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->contentGrid([
-                'md' => 2,
-                'xl' => 4,
-            ])
-            ->columns([
-                Tables\Columns\Layout\Stack::make([
+        return self::configureTable($table);
+    }
+
+    public static function configureTable(Table $table, string $layout = TableLayoutConfigurator::LAYOUT_LIST): Table
+    {
+        return TableLayoutConfigurator::apply(
+            $table,
+            $layout,
+            [
+                Tables\Columns\TextColumn::make('name')
+                    ->label(__('admin.block_name'))
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('description')
+                    ->label(__('admin.description'))
+                    ->limit(80)
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label(__('Date'))
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+            ],
+            [
+                TableLayoutConfigurator::cardStack([
                     Tables\Columns\TextColumn::make('name')
                         ->label(__('admin.block_name'))
                         ->searchable()
@@ -54,12 +73,14 @@ class BlockResource extends Resource
                         ->color('gray')
                         ->size('sm'),
                     Tables\Columns\TextColumn::make('created_at')
-                        ->label('Created At')
-                        ->dateTime()
+                        ->label(__('Date'))
+                        ->dateTime('d/m/Y H:i')
                         ->color('gray')
                         ->size('sm'),
-                ])->space(1),
-            ])
+                ], 1),
+            ],
+            ['md' => 2, 'xl' => 4],
+        )
             ->defaultSort('name')
             ->filters([])
             ->actions([

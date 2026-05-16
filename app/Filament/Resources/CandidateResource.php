@@ -3,6 +3,8 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\CandidateResource\Pages;
+use App\Filament\Support\TableLayoutConfigurator;
+use App\Models\ApplicationProgress;
 use App\Models\Candidate;
 use App\Models\CandidateNotification;
 use Filament\Forms;
@@ -11,6 +13,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class CandidateResource extends Resource
 {
@@ -75,65 +78,17 @@ class CandidateResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->contentGrid([
-                'md' => 2,
-                'xl' => 3,
-            ])
-            ->columns([
-                Tables\Columns\Layout\Stack::make([
-                    Tables\Columns\Layout\Split::make([
-                        Tables\Columns\TextColumn::make('user.name')
-                            ->label(__('admin.full_name'))
-                            ->searchable()
-                            ->sortable()
-                            ->weight('bold'),
-                        Tables\Columns\TextColumn::make('status')
-                            ->label(__('Status'))
-                            ->badge()
-                            ->formatStateUsing(fn ($state) => match ($state) {
-                                'pending'     => __('Pending'),
-                                'in_progress' => __('In Progress'),
-                                'validated'   => __('Validated'),
-                                'rejected'    => __('Rejected'),
-                                default       => $state,
-                            })
-                            ->color(fn ($state) => match ($state) {
-                                'validated'   => 'success',
-                                'rejected'    => 'danger',
-                                'in_progress' => 'info',
-                                default       => 'warning',
-                            }),
-                    ]),
-                    Tables\Columns\TextColumn::make('user.email')
-                        ->label(__('Email'))
-                        ->searchable()
-                        ->color('gray')
-                        ->size('sm'),
-                    Tables\Columns\Layout\Split::make([
-                        Tables\Columns\TextColumn::make('phone')
-                            ->label(__('admin.phone'))
-                            ->icon('heroicon-o-phone')
-                            ->size('sm'),
-                        Tables\Columns\IconColumn::make('cv_path')
-                            ->label('CV')
-                            ->boolean()
-                            ->trueIcon('heroicon-o-document')
-                            ->falseIcon('heroicon-o-x-mark'),
-                        Tables\Columns\TextColumn::make('primary_score')
-                            ->label(__('Score'))
-                            ->badge()
-                            ->color('success')
-                            ->suffix('/100'),
-                    ]),
-                    Tables\Columns\TextColumn::make('user.created_at')
-                        ->label(__('Date'))
-                        ->dateTime('d/m/Y')
-                        ->sortable()
-                        ->color('gray')
-                        ->size('sm'),
-                ])->space(2),
-            ])
+        return self::configureTable($table);
+    }
+
+    public static function configureTable(Table $table, string $layout = TableLayoutConfigurator::LAYOUT_LIST): Table
+    {
+        return TableLayoutConfigurator::apply(
+            $table,
+            $layout,
+            self::candidateListColumns(),
+            self::candidateCardColumns(),
+        )
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->label(__('Status'))
@@ -203,6 +158,235 @@ class CandidateResource extends Resource
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    /**
+     * @param  array<int, int>  $rankByApplicationId
+     */
+    public static function configureOfferApplicantsTable(
+        Table $table,
+        string $layout,
+        array $rankByApplicationId,
+    ): Table {
+        return TableLayoutConfigurator::apply(
+            $table,
+            $layout,
+            self::offerApplicantListColumns($rankByApplicationId),
+            self::offerApplicantCardColumns($rankByApplicationId),
+        );
+    }
+
+    /**
+     * @return array<int, Tables\Columns\Column>
+     */
+    private static function candidateListColumns(): array
+    {
+        return [
+            Tables\Columns\TextColumn::make('user.name')
+                ->label(__('admin.full_name'))
+                ->searchable()
+                ->sortable(),
+            Tables\Columns\TextColumn::make('user.email')
+                ->label(__('Email'))
+                ->searchable(),
+            Tables\Columns\TextColumn::make('phone')
+                ->label(__('admin.phone'))
+                ->toggleable(),
+            Tables\Columns\TextColumn::make('status')
+                ->label(__('Status'))
+                ->badge()
+                ->formatStateUsing(fn ($state) => self::formatCandidateStatus($state))
+                ->color(fn ($state) => self::candidateStatusColor($state)),
+            Tables\Columns\TextColumn::make('primary_score')
+                ->label(__('Score'))
+                ->suffix('/100')
+                ->alignEnd(),
+            Tables\Columns\IconColumn::make('cv_path')
+                ->label('CV')
+                ->boolean(),
+        ];
+    }
+
+    /**
+     * @return array<int, Tables\Columns\Layout\Component>
+     */
+    private static function candidateCardColumns(): array
+    {
+        return [
+            TableLayoutConfigurator::cardStack([
+                Tables\Columns\Layout\Split::make([
+                    Tables\Columns\TextColumn::make('user.name')
+                        ->label(__('admin.full_name'))
+                        ->searchable()
+                        ->sortable()
+                        ->weight('bold'),
+                    Tables\Columns\TextColumn::make('status')
+                        ->label(__('Status'))
+                        ->badge()
+                        ->formatStateUsing(fn ($state) => self::formatCandidateStatus($state))
+                        ->color(fn ($state) => self::candidateStatusColor($state)),
+                ]),
+                Tables\Columns\TextColumn::make('user.email')
+                    ->label(__('Email'))
+                    ->searchable()
+                    ->color('gray')
+                    ->size('sm'),
+                Tables\Columns\Layout\Split::make([
+                    Tables\Columns\TextColumn::make('phone')
+                        ->label(__('admin.phone'))
+                        ->icon('heroicon-o-phone')
+                        ->size('sm'),
+                    Tables\Columns\IconColumn::make('cv_path')
+                        ->label('CV')
+                        ->boolean()
+                        ->trueIcon('heroicon-o-document')
+                        ->falseIcon('heroicon-o-x-mark'),
+                    Tables\Columns\TextColumn::make('primary_score')
+                        ->label(__('Score'))
+                        ->badge()
+                        ->color('success')
+                        ->suffix('/100'),
+                ]),
+                Tables\Columns\TextColumn::make('user.created_at')
+                    ->label(__('Date'))
+                    ->dateTime('d/m/Y')
+                    ->sortable()
+                    ->color('gray')
+                    ->size('sm'),
+            ]),
+        ];
+    }
+
+    /**
+     * @param  array<int, int>  $rankByApplicationId
+     * @return array<int, Tables\Columns\Column>
+     */
+    private static function offerApplicantListColumns(array $rankByApplicationId): array
+    {
+        return [
+            Tables\Columns\TextColumn::make('rank')
+                ->label(__('admin.candidate_rank'))
+                ->getStateUsing(fn (ApplicationProgress $record): string => (string) ($rankByApplicationId[$record->id] ?? '—'))
+                ->alignCenter(),
+            Tables\Columns\TextColumn::make('candidate.full_name')
+                ->label(__('admin.full_name'))
+                ->getStateUsing(fn (ApplicationProgress $record): string => $record->candidate?->full_name ?? '—')
+                ->searchable(query: self::offerApplicantSearchQuery()),
+            Tables\Columns\TextColumn::make('status')
+                ->label(__('Status'))
+                ->badge()
+                ->formatStateUsing(fn (?string $state): string => self::formatApplicationStatus($state))
+                ->color(fn (?string $state): string => self::applicationStatusColor($state)),
+            Tables\Columns\TextColumn::make('main_score')
+                ->label(__('admin.candidate_score'))
+                ->formatStateUsing(fn ($state): string => $state !== null && $state !== ''
+                    ? number_format((float) $state, 2).'%'
+                    : '—')
+                ->alignEnd()
+                ->sortable(),
+        ];
+    }
+
+    /**
+     * @param  array<int, int>  $rankByApplicationId
+     * @return array<int, Tables\Columns\Layout\Component>
+     */
+    private static function offerApplicantCardColumns(array $rankByApplicationId): array
+    {
+        return [
+            TableLayoutConfigurator::cardStack([
+                Tables\Columns\Layout\Split::make([
+                    Tables\Columns\TextColumn::make('candidate.full_name')
+                        ->label(__('admin.full_name'))
+                        ->getStateUsing(fn (ApplicationProgress $record): string => $record->candidate?->full_name ?? '—')
+                        ->searchable(query: self::offerApplicantSearchQuery())
+                        ->weight('bold'),
+                    Tables\Columns\TextColumn::make('rank')
+                        ->label(__('admin.candidate_rank'))
+                        ->getStateUsing(fn (ApplicationProgress $record): string => '#'.($rankByApplicationId[$record->id] ?? '—'))
+                        ->alignEnd()
+                        ->badge()
+                        ->color('gray'),
+                ]),
+                Tables\Columns\TextColumn::make('candidate.user.email')
+                    ->label(__('Email'))
+                    ->placeholder('—')
+                    ->color('gray')
+                    ->size('sm'),
+                Tables\Columns\Layout\Split::make([
+                    Tables\Columns\TextColumn::make('status')
+                        ->label(__('Status'))
+                        ->badge()
+                        ->formatStateUsing(fn (?string $state): string => self::formatApplicationStatus($state))
+                        ->color(fn (?string $state): string => self::applicationStatusColor($state)),
+                    Tables\Columns\TextColumn::make('main_score')
+                        ->label(__('admin.candidate_score'))
+                        ->formatStateUsing(fn ($state): string => $state !== null && $state !== ''
+                            ? number_format((float) $state, 2).'%'
+                            : '—')
+                        ->weight('bold')
+                        ->alignEnd(),
+                ]),
+            ]),
+        ];
+    }
+
+    /**
+     * @return Closure(Builder, string): Builder
+     */
+    private static function offerApplicantSearchQuery(): \Closure
+    {
+        return function (Builder $query, string $search): Builder {
+            return $query->whereHas('candidate', function (Builder $q) use ($search): void {
+                $q->where('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhereHas('user', fn (Builder $u) => $u->where('name', 'like', "%{$search}%"));
+            });
+        };
+    }
+
+    private static function formatCandidateStatus(mixed $state): string
+    {
+        return match ($state) {
+            'pending' => __('Pending'),
+            'in_progress' => __('In Progress'),
+            'validated' => __('Validated'),
+            'rejected' => __('Rejected'),
+            default => (string) $state,
+        };
+    }
+
+    private static function candidateStatusColor(mixed $state): string
+    {
+        return match ($state) {
+            'validated' => 'success',
+            'rejected' => 'danger',
+            'in_progress' => 'info',
+            default => 'warning',
+        };
+    }
+
+    private static function formatApplicationStatus(?string $state): string
+    {
+        return match ($state) {
+            'pending' => __('Pending'),
+            'in_progress' => __('In Progress'),
+            'validated' => __('Validated'),
+            'rejected' => __('Rejected'),
+            'cancelled' => __('Cancelled'),
+            default => (string) $state,
+        };
+    }
+
+    private static function applicationStatusColor(?string $state): string
+    {
+        return match ($state) {
+            'validated' => 'success',
+            'rejected' => 'danger',
+            'in_progress' => 'info',
+            'pending' => 'warning',
+            default => 'gray',
+        };
     }
 
     public static function getPages(): array

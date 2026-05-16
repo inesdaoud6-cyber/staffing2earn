@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\OffreResource\Pages;
+use App\Filament\Support\TableLayoutConfigurator;
 use App\Models\CandidateNotification;
 use App\Models\Offre;
 use App\Models\Test;
@@ -100,56 +101,17 @@ class OffreResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->contentGrid([
-                'md' => 2,
-                'xl' => 3,
-            ])
-            ->columns([
-                Tables\Columns\Layout\Stack::make([
-                    Tables\Columns\Layout\Split::make([
-                        Tables\Columns\TextColumn::make('title')
-                            ->label(__('admin.title'))
-                            ->searchable()
-                            ->weight('bold'),
-                        Tables\Columns\IconColumn::make('is_published')
-                            ->label(__('admin.published'))
-                            ->boolean(),
-                    ]),
-                    Tables\Columns\Layout\Split::make([
-                        Tables\Columns\TextColumn::make('domain')
-                            ->label(__('admin.domain'))
-                            ->icon('heroicon-o-map-pin')
-                            ->size('sm'),
-                        Tables\Columns\TextColumn::make('contract_type')
-                            ->label(__('admin.contract_type'))
-                            ->badge()
-                            ->color('info'),
-                    ]),
-                    Tables\Columns\Layout\Split::make([
-                        Tables\Columns\TextColumn::make('levels_count')
-                            ->label('Niveaux')
-                            ->badge()
-                            ->color('gray'),
-                        Tables\Columns\TextColumn::make('test.name')
-                            ->label(__('admin.associated_test'))
-                            ->badge()
-                            ->color('success')
-                            ->default(__('admin.none')),
-                        Tables\Columns\TextColumn::make('applicationProgresses_count')
-                            ->label(__('admin.applications'))
-                            ->counts('applicationProgresses')
-                            ->badge()
-                            ->color('warning'),
-                    ]),
-                    Tables\Columns\TextColumn::make('deadline')
-                        ->label(__('admin.deadline'))
-                        ->date('d/m/Y')
-                        ->icon('heroicon-o-calendar')
-                        ->color('gray')
-                        ->size('sm'),
-                ])->space(2),
-            ])
+        return self::configureTable($table);
+    }
+
+    public static function configureTable(Table $table, string $layout = TableLayoutConfigurator::LAYOUT_LIST): Table
+    {
+        return TableLayoutConfigurator::apply(
+            $table,
+            $layout,
+            self::offreListColumns('applicationProgresses_count'),
+            self::offreCardColumns('applicationProgresses_count'),
+        )
             ->actions([
                 Tables\Actions\Action::make('notifier_tous')
                     ->label(__('admin.notify_candidates'))
@@ -183,6 +145,152 @@ class OffreResource extends Resource
                 Tables\Actions\EditAction::make()->label(__('Edit')),
                 Tables\Actions\DeleteAction::make()->label(__('admin.delete')),
             ]);
+    }
+
+    public static function configureOffersHubTable(Table $table, string $layout = TableLayoutConfigurator::LAYOUT_LIST): Table
+    {
+        return TableLayoutConfigurator::apply(
+            $table,
+            $layout,
+            self::offreListColumns('applications_count'),
+            self::offreCardColumns('applications_count'),
+        );
+    }
+
+    public static function configureCandidateOffersHubTable(Table $table, string $layout = TableLayoutConfigurator::LAYOUT_LIST): Table
+    {
+        return TableLayoutConfigurator::apply(
+            $table,
+            $layout,
+            [
+                Tables\Columns\TextColumn::make('title')
+                    ->label(__('nav.job_offer'))
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('applications_count')
+                    ->label(__('nav.candidates'))
+                    ->alignEnd()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('deadline')
+                    ->label(__('admin.deadline'))
+                    ->date('d/m/Y')
+                    ->placeholder('—')
+                    ->sortable(),
+            ],
+            [
+                TableLayoutConfigurator::cardStack([
+                    Tables\Columns\TextColumn::make('title')
+                        ->label(__('nav.job_offer'))
+                        ->searchable()
+                        ->weight('bold'),
+                    Tables\Columns\Layout\Split::make([
+                        Tables\Columns\TextColumn::make('applications_count')
+                            ->label(__('nav.candidates'))
+                            ->badge()
+                            ->color('info'),
+                        Tables\Columns\TextColumn::make('deadline')
+                            ->label(__('admin.deadline'))
+                            ->date('d/m/Y')
+                            ->placeholder('—')
+                            ->color('gray')
+                            ->size('sm'),
+                    ]),
+                ]),
+            ],
+        );
+    }
+
+    private static function offreApplicationsCountColumn(string $applicationsCountColumn): Tables\Columns\TextColumn
+    {
+        $column = Tables\Columns\TextColumn::make($applicationsCountColumn)
+            ->label(__('admin.applications'));
+
+        if ($applicationsCountColumn === 'applicationProgresses_count') {
+            $column->counts('applicationProgresses');
+        }
+
+        return $column;
+    }
+
+    /**
+     * @return array<int, Tables\Columns\Column>
+     */
+    private static function offreListColumns(string $applicationsCountColumn): array
+    {
+        return [
+            Tables\Columns\TextColumn::make('title')
+                ->label(__('admin.title'))
+                ->searchable()
+                ->sortable(),
+            Tables\Columns\TextColumn::make('domain')
+                ->label(__('admin.domain'))
+                ->toggleable(),
+            Tables\Columns\TextColumn::make('contract_type')
+                ->label(__('admin.contract_type'))
+                ->badge()
+                ->toggleable(),
+            Tables\Columns\IconColumn::make('is_published')
+                ->label(__('admin.published'))
+                ->boolean(),
+            self::offreApplicationsCountColumn($applicationsCountColumn)
+                ->alignEnd()
+                ->sortable(),
+            Tables\Columns\TextColumn::make('deadline')
+                ->label(__('admin.deadline'))
+                ->date('d/m/Y')
+                ->placeholder('—')
+                ->sortable(),
+        ];
+    }
+
+    /**
+     * @return array<int, Tables\Columns\Layout\Component>
+     */
+    private static function offreCardColumns(string $applicationsCountColumn): array
+    {
+        return [
+            TableLayoutConfigurator::cardStack([
+                Tables\Columns\Layout\Split::make([
+                    Tables\Columns\TextColumn::make('title')
+                        ->label(__('admin.title'))
+                        ->searchable()
+                        ->weight('bold'),
+                    Tables\Columns\IconColumn::make('is_published')
+                        ->label(__('admin.published'))
+                        ->boolean(),
+                ]),
+                Tables\Columns\Layout\Split::make([
+                    Tables\Columns\TextColumn::make('domain')
+                        ->label(__('admin.domain'))
+                        ->icon('heroicon-o-map-pin')
+                        ->size('sm'),
+                    Tables\Columns\TextColumn::make('contract_type')
+                        ->label(__('admin.contract_type'))
+                        ->badge()
+                        ->color('info'),
+                ]),
+                Tables\Columns\Layout\Split::make([
+                    Tables\Columns\TextColumn::make('levels_count')
+                        ->label('Niveaux')
+                        ->badge()
+                        ->color('gray'),
+                    Tables\Columns\TextColumn::make('test.name')
+                        ->label(__('admin.associated_test'))
+                        ->badge()
+                        ->color('success')
+                        ->default(__('admin.none')),
+                    self::offreApplicationsCountColumn($applicationsCountColumn)
+                        ->badge()
+                        ->color('warning'),
+                ]),
+                Tables\Columns\TextColumn::make('deadline')
+                    ->label(__('admin.deadline'))
+                    ->date('d/m/Y')
+                    ->icon('heroicon-o-calendar')
+                    ->color('gray')
+                    ->size('sm'),
+            ]),
+        ];
     }
 
     /**

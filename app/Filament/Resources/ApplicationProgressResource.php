@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\ApplicationProgressResource\Pages;
+use App\Filament\Support\TableLayoutConfigurator;
 use App\Models\ApplicationProgress;
 use App\Models\Candidate;
 use App\Models\CandidateNotification;
@@ -169,23 +170,12 @@ class ApplicationProgressResource extends Resource
 
     public static function configureTable(Table $table, string $layout = 'list', bool $hideOfferColumn = false): Table
     {
-        $layout = in_array($layout, ['list', 'cards'], true) ? $layout : 'list';
-
-        $table = $table->defaultSort('created_at', 'desc');
-
-        if ($layout === 'cards') {
-            $table
-                ->striped(false)
-                ->contentGrid([
-                    'md' => 2,
-                    'xl' => 3,
-                ])
-                ->columns(self::applicationProgressCardColumns($hideOfferColumn));
-        } else {
-            $table
-                ->striped()
-                ->columns(self::applicationProgressListColumns($hideOfferColumn));
-        }
+        $table = TableLayoutConfigurator::apply(
+            $table->defaultSort('created_at', 'desc'),
+            $layout,
+            self::applicationProgressListColumns($hideOfferColumn),
+            self::applicationProgressCardColumns($hideOfferColumn),
+        );
 
         return $table
             ->recordUrl(function (ApplicationProgress $record): string {

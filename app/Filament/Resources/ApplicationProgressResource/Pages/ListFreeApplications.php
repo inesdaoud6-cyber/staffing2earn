@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\ApplicationProgressResource\Pages;
 
 use App\Filament\Resources\ApplicationProgressResource;
-use Filament\Resources\Pages\ListRecords;
 use Filament\Tables\Table;
 use Illuminate\Contracts\Support\Htmlable;
 
@@ -17,11 +16,7 @@ class ListFreeApplications extends ListApplicationProgress
     {
         $this->offre = 'libre';
 
-        ListRecords::mount();
-
-        if (! in_array($this->applicationsTableLayout, ['list', 'cards'], true)) {
-            $this->applicationsTableLayout = 'list';
-        }
+        parent::mount();
     }
 
     public function getTitle(): string|Htmlable
@@ -36,7 +31,7 @@ class ListFreeApplications extends ListApplicationProgress
 
     public function table(Table $table): Table
     {
-        return ApplicationProgressResource::configureTable($table, $this->applicationsTableLayout, hideOfferColumn: true)
+        return ApplicationProgressResource::configureTable($table, $this->tableLayout, hideOfferColumn: true)
             ->modifyQueryUsing(fn ($query) => $query->whereNull('offre_id'));
     }
 

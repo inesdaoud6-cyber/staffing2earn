@@ -5,7 +5,7 @@ namespace App\Filament\Resources\GroupResource\Pages;
 use App\Filament\Resources\GroupResource;
 use App\Models\Block;
 use Filament\Actions;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Resources\Pages\ListRecords;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Url;
@@ -36,7 +36,7 @@ class ListGroups extends ListRecords
 
     public function table(Table $table): Table
     {
-        return GroupResource::table($table)
+        return parent::table($table)
             ->filters([])
             ->modifyQueryUsing(function (Builder $query): Builder {
                 $query->withCount('questions');

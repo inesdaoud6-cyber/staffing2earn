@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\TestResource\Pages;
+use App\Filament\Support\TableLayoutConfigurator;
 use App\Models\Block;
 use App\Models\Group;
 use App\Models\Question;
@@ -395,14 +396,35 @@ class TestResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->columns([
-                Tables\Columns\TextColumn::make('name')->label('Nom du test')->searchable(),
+        return self::configureTable($table);
+    }
+
+    public static function configureTable(Table $table, string $layout = TableLayoutConfigurator::LAYOUT_LIST): Table
+    {
+        return TableLayoutConfigurator::apply(
+            $table,
+            $layout,
+            [
+                Tables\Columns\TextColumn::make('name')->label('Nom du test')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('questions_count')->label('Questions')->counts('questions')->badge()->color('info'),
                 Tables\Columns\TextColumn::make('eligibility_threshold')->label('Seuil admissibilité')->suffix('%'),
                 Tables\Columns\TextColumn::make('talent_threshold')->label('Seuil talents')->suffix('%'),
-                Tables\Columns\TextColumn::make('created_at')->label('Date')->date('d/m/Y'),
-            ])
+                Tables\Columns\TextColumn::make('created_at')->label('Date')->date('d/m/Y')->sortable(),
+            ],
+            [
+                TableLayoutConfigurator::cardStack([
+                    Tables\Columns\TextColumn::make('name')->label('Nom du test')->searchable()->weight('bold'),
+                    Tables\Columns\Layout\Split::make([
+                        Tables\Columns\TextColumn::make('questions_count')->label('Questions')->counts('questions')->badge()->color('info'),
+                        Tables\Columns\TextColumn::make('created_at')->label('Date')->date('d/m/Y')->color('gray')->size('sm'),
+                    ]),
+                    Tables\Columns\Layout\Split::make([
+                        Tables\Columns\TextColumn::make('eligibility_threshold')->label('Seuil admissibilité')->suffix('%')->badge(),
+                        Tables\Columns\TextColumn::make('talent_threshold')->label('Seuil talents')->suffix('%')->badge()->color('success'),
+                    ]),
+                ]),
+            ],
+        )
             ->actions([
                 Tables\Actions\EditAction::make()->label('Modifier'),
                 Tables\Actions\DeleteAction::make()->label('Supprimer'),
