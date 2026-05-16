@@ -581,5 +581,15 @@
     "login.espace-candidat": "مساحة المرشح",
     "or": "أو",
     "unread": "غير مقروء",
-    "— Questions": "— الأسئلة"
+    "— Questions": "— الأسئلة",
+    "nav.candidate_space": "مساحة المرشح",
+    "candidate.level_submitted_notification_body": "تم حفظ إجاباتك للمستوى :level وهي في انتظار اعتماد المسؤول.",
+    "candidate.level_submitted_notification_title": "تم إرسال المستوى :level",
+    "candidate.level_submitted_title": "تم إرسال المستوى :level بنجاح",
+    "candidate.submit_level_confirm": "إرسال المستوى :level؟ لا يمكن التراجع عن هذا الإجراء.",
+    "candidate.take_test_level_header": "المستوى :level",
+    "candidate.take_test_level_submitted_title": "تم إرسال المستوى :level",
+    "candidate.test_timer_expired_notification_body": "انتهى الوقت المخصص للمستوى :level. تم حفظ إجاباتك.",
+    "admin.user_details_heading": "تفاصيل المستخدم: :name",
+    "test.group-block-mismatch": "المجموعة المحددة لا تنتمي إلى الكتلة المختارة."
 }

@@ -581,5 +581,15 @@
     "login.espace-candidat": "Candidate space",
     "or": "or",
     "unread": "unread",
-    "— Questions": "— Questions"
+    "— Questions": "— Questions",
+    "nav.candidate_space": "Candidate Space",
+    "candidate.level_submitted_notification_body": "Your level :level answers have been saved and are awaiting administrator validation.",
+    "candidate.level_submitted_notification_title": "Level :level submitted",
+    "candidate.level_submitted_title": "Level :level submitted successfully",
+    "candidate.submit_level_confirm": "Submit level :level? This cannot be undone.",
+    "candidate.take_test_level_header": "Level :level",
+    "candidate.take_test_level_submitted_title": "Level :level submitted",
+    "candidate.test_timer_expired_notification_body": "The time allowed for level :level has ended. Your answers have been saved.",
+    "admin.user_details_heading": "User details: :name",
+    "test.group-block-mismatch": "The selected group does not belong to the chosen block."
 }

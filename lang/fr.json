@@ -581,5 +581,15 @@
     "login.espace-candidat": "Espace candidat",
     "or": "ou",
     "unread": "non lu(e)",
-    "— Questions": "— Questions"
+    "— Questions": "— Questions",
+    "nav.candidate_space": "Espace candidat",
+    "candidate.level_submitted_notification_body": "Vos réponses du niveau :level ont été enregistrées. En attente de validation de l'administrateur.",
+    "candidate.level_submitted_notification_title": "Niveau :level soumis",
+    "candidate.level_submitted_title": "Niveau :level soumis avec succès",
+    "candidate.submit_level_confirm": "Soumettre le niveau :level ? Cette action est irréversible.",
+    "candidate.take_test_level_header": "Niveau :level",
+    "candidate.take_test_level_submitted_title": "Niveau :level soumis",
+    "candidate.test_timer_expired_notification_body": "Le temps imparti pour le niveau :level est terminé. Vos réponses ont été enregistrées.",
+    "admin.user_details_heading": "Détails de l'utilisateur : :name",
+    "test.group-block-mismatch": "Le groupe sélectionné n'appartient pas au bloc choisi."
 }
