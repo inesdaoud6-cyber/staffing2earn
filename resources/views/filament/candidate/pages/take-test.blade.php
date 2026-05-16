@@ -3,6 +3,8 @@
 @endphp
 
 <x-filament-panels::page>
+    @vite('resources/css/candidate-application-space.css')
+
     @if ($this->pageStatus === 'test' && $this->wholeTestExpiresAtUnix)
         <div wire:poll.30s="pollTestTimer" class="hidden" aria-hidden="true"></div>
     @endif
@@ -22,6 +24,16 @@
             <div class="mb-4 text-4xl">⏳</div>
             <h2 class="mb-2 text-xl font-bold text-amber-950 dark:text-amber-100">{{ __('candidate.take_test_waiting_admin_title') }}</h2>
             <p class="text-amber-900/80 dark:text-amber-200/80">{{ __('candidate.take_test_waiting_admin_body') }}</p>
+        </div>
+
+    @elseif ($this->pageStatus === 'no_questions')
+        <div class="rounded-xl border border-amber-200 bg-amber-50 p-10 text-center dark:border-amber-900 dark:bg-amber-950/40">
+            <div class="mb-4 text-4xl">⚠️</div>
+            <h2 class="mb-2 text-xl font-bold text-amber-950 dark:text-amber-100">{{ __('candidate.take_test_no_questions_title') }}</h2>
+            <p class="mb-6 text-amber-900/80 dark:text-amber-200/80">{{ __('candidate.take_test_no_questions_body') }}</p>
+            <x-filament::button tag="a" href="/candidate/applications" color="gray">
+                {{ __('nav.my_applications') }}
+            </x-filament::button>
         </div>
 
     @elseif ($this->pageStatus === 'waiting_test_assignment')
@@ -141,24 +153,24 @@
             </div>
         @endif
 
-        <div @class(['space-y-6', 'pt-28' => $this->wholeTestExpiresAtUnix, 'pt-0' => ! $this->wholeTestExpiresAtUnix])>
-            <div class="rounded-lg p-4" style="background-color: #581c87;">
+        <div @class(['candidate-application-space tt-test-wrap', 'pt-28' => $this->wholeTestExpiresAtUnix, 'pt-0' => ! $this->wholeTestExpiresAtUnix])>
+            <div class="tt-hero">
                 <div class="flex flex-wrap items-start justify-between gap-4">
                     <div>
-                        <h2 class="text-xl font-bold text-white">
+                        <h2 class="tt-hero__title">
                             🎯 {{ __('candidate.take_test_level_header', ['level' => $this->currentLevel]) }}
                         </h2>
-                        <p style="color: #d8b4fe;">{{ __('candidate.take_test_instructions') }}</p>
+                        <p class="tt-hero__desc">{{ __('candidate.take_test_instructions') }}</p>
                     </div>
-                    <div class="text-right text-white">
-                        <div class="text-2xl font-extrabold">{{ $this->answeredCount }}/{{ $this->totalQuestions }}</div>
-                        <div class="text-xs text-violet-200">{{ __('candidate.take_test_answered_label') }}</div>
+                    <div class="tt-hero__progress">
+                        <div class="tt-hero__count">{{ $this->answeredCount }}/{{ $this->totalQuestions }}</div>
+                        <div class="tt-hero__count-label">{{ __('candidate.take_test_answered_label') }}</div>
                     </div>
                 </div>
                 @if ($this->totalQuestions > 0)
-                    <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-white/20">
+                    <div class="tt-hero__bar">
                         <div
-                            class="h-full rounded-full bg-white transition-all"
+                            class="tt-hero__bar-fill"
                             style="width: {{ round(($this->answeredCount / $this->totalQuestions) * 100) }}%;"
                         ></div>
                     </div>
@@ -166,8 +178,9 @@
             </div>
 
             @foreach ($this->getQuestions() as $question)
-                <div class="rounded-lg p-6 shadow" style="background-color: #1f2937;">
-                    <p class="mb-4 font-semibold text-white">
+                @php($mcqOptions = $this->mcqOptionsForQuestion($question))
+                <div wire:key="take-test-question-{{ $question->id }}" class="tt-question">
+                    <p class="tt-question__text">
                         {{ $loop->iteration }}.
                         @if ($locale === 'ar' && $question->question_ar)
                             {{ $question->question_ar }}
@@ -177,36 +190,36 @@
                             {{ $question->question_fr }}
                         @endif
                         @if ($question->max_note > 0)
-                            <span style="color:#a78bfa; font-size:0.85em;">({{ $question->max_note }} pts)</span>
+                            <span class="tt-question__points">({{ $question->max_note }} pts)</span>
                         @endif
                     </p>
 
-                    @if ($question->component === 'radio' && $question->possible_answers)
-                        <div class="space-y-2">
-                            @foreach ($question->possible_answers as $answer)
-                                <label class="flex cursor-pointer items-center gap-3">
+                    @if ($question->component === 'radio' && count($mcqOptions) > 0)
+                        <div class="tt-options">
+                            @foreach ($mcqOptions as $option)
+                                <label wire:key="take-test-q{{ $question->id }}-r{{ $loop->index }}" class="tt-option">
                                     <input
                                         type="radio"
                                         wire:model.live="answers.{{ $question->id }}"
-                                        value="{{ $answer }}"
+                                        value="{{ $option }}"
                                         @disabled($this->alreadySubmitted)
                                     />
-                                    <span style="color: #d1d5db;">{{ $answer }}</span>
+                                    <span class="tt-option__label">{{ $option }}</span>
                                 </label>
                             @endforeach
                         </div>
-                    @elseif ($question->component === 'checkbox' && $question->possible_answers)
-                        <div class="space-y-2">
-                            <p class="text-sm" style="color: #9ca3af;">{{ __('candidate.qcm_select_all_that_apply') }}</p>
-                            @foreach ($question->possible_answers as $answer)
-                                <label class="flex cursor-pointer items-center gap-3">
+                    @elseif ($question->component === 'checkbox' && count($mcqOptions) > 0)
+                        <div class="tt-options">
+                            <p class="tt-options__hint">{{ __('candidate.qcm_select_all_that_apply') }}</p>
+                            @foreach ($mcqOptions as $option)
+                                <label wire:key="take-test-q{{ $question->id }}-c{{ $loop->index }}" class="tt-option">
                                     <input
                                         type="checkbox"
                                         wire:model.live="answers.{{ $question->id }}"
-                                        value="{{ $answer }}"
+                                        value="{{ $option }}"
                                         @disabled($this->alreadySubmitted)
                                     />
-                                    <span style="color: #d1d5db;">{{ $answer }}</span>
+                                    <span class="tt-option__label">{{ $option }}</span>
                                 </label>
                             @endforeach
                         </div>
@@ -216,14 +229,14 @@
                             rows="3"
                             placeholder="{{ __('candidate.your_answer_placeholder') }}"
                             @disabled($this->alreadySubmitted)
-                            style="width:100%; padding:12px; background-color:#374151; color:white; border:1px solid #4b5563; border-radius:8px;"
+                            class="tt-field"
                         ></textarea>
                     @elseif ($question->component === 'date')
                         <input
                             type="date"
                             wire:model.live="answers.{{ $question->id }}"
                             @disabled($this->alreadySubmitted)
-                            style="padding:12px; background-color:#374151; color:white; border:1px solid #4b5563; border-radius:8px;"
+                            class="tt-field"
                         />
                     @elseif ($question->component === 'photo')
                         <input
@@ -231,29 +244,27 @@
                             wire:model="answers.{{ $question->id }}"
                             accept="image/*"
                             @disabled($this->alreadySubmitted)
-                            style="color:white;"
+                            class="tt-field"
                         />
                     @elseif ($question->component === 'list')
                         <select
                             wire:model.live="answers.{{ $question->id }}"
                             @disabled($this->alreadySubmitted)
-                            style="width:100%; padding:12px; background-color:#374151; color:white; border:1px solid #4b5563; border-radius:8px;"
+                            class="tt-field"
                         >
                             <option value="">-- {{ __('candidate.choose_option') }} --</option>
-                            @if ($question->possible_answers)
-                                @foreach ($question->possible_answers as $answer)
-                                    <option value="{{ $answer }}" style="background-color:#374151; color:white;">
-                                        {{ $answer }}
-                                    </option>
-                                @endforeach
-                            @endif
+                            @foreach ($mcqOptions as $option)
+                                <option value="{{ $option }}">
+                                    {{ $option }}
+                                </option>
+                            @endforeach
                         </select>
                     @endif
                 </div>
             @endforeach
 
             @if (! $this->alreadySubmitted)
-                <div class="flex flex-wrap gap-4 pb-6">
+                <div class="tt-actions">
                     <x-filament::button type="button" wire:click="saveAnswers" wire:loading.attr="disabled" color="gray" outlined>
                         <span wire:loading.remove wire:target="saveAnswers">💾 {{ __('Save') }}</span>
                         <span wire:loading wire:target="saveAnswers">…</span>

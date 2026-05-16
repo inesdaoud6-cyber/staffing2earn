@@ -1402,6 +1402,11 @@
     text-align: left;
     border-bottom: 1px solid #f1f5f9;
     vertical-align: top;
+    background: #ffffff;
+}
+
+.as-review-table td {
+    color: #475569;
 }
 
 .as-review-table th {
@@ -1438,4 +1443,264 @@
     color: #3730a3;
     padding-bottom: 0.35rem;
     border-bottom: 2px solid #e0e7ff;
+}
+
+/* -------------------------------------------------------------------------
+   Filament dark mode — keep candidate tracking readable (light surfaces)
+   ------------------------------------------------------------------------- */
+.dark .candidate-application-space {
+    color: #334155;
+}
+
+.dark .candidate-application-space .as-panel,
+.dark .candidate-application-space .as-pipeline,
+.dark .candidate-application-space .as-stat,
+.dark .candidate-application-space .as-app-card,
+.dark .candidate-application-space .as-detail-page,
+.dark .candidate-application-space .as-detail-section--muted,
+.dark .candidate-application-space .as-detail-tests li,
+.dark .candidate-application-space .as-detail-tests__cv {
+    background: #ffffff;
+    border-color: #e2e8f0;
+    color: #334155;
+}
+
+.dark .candidate-application-space .as-panel-title,
+.dark .candidate-application-space .as-detail-hero__title,
+.dark .candidate-application-space .as-detail-tests__name,
+.dark .candidate-application-space .as-table-title,
+.dark .candidate-application-space .as-app-card__title {
+    color: #1a1a8c;
+}
+
+.dark .candidate-application-space .as-panel-desc,
+.dark .candidate-application-space .as-muted,
+.dark .candidate-application-space .as-pipeline__hint,
+.dark .candidate-application-space .as-step-caption,
+.dark .candidate-application-space .as-detail-prose {
+    color: #64748b;
+}
+
+.dark .candidate-application-space .as-review-table-wrap {
+    border-color: #e2e8f0;
+    background: #ffffff;
+}
+
+.dark .candidate-application-space .as-review-table th {
+    background: #f8fafc;
+    color: #334155;
+}
+
+.dark .candidate-application-space .as-review-table td {
+    background: #ffffff;
+    color: #475569;
+    border-bottom-color: #f1f5f9;
+}
+
+.dark .candidate-application-space .as-step-marker--circle,
+.dark .candidate-application-space .as-step-marker--dot {
+    background: #ffffff;
+    border-color: #d8d4e8;
+}
+
+.dark .candidate-application-space .as-step-btn--future .as-step-marker--circle {
+    background: #faf9fc;
+}
+
+.dark .candidate-application-space .as-step-btn--current .as-step-marker--circle {
+    background: #f5f3ff;
+}
+
+.dark .candidate-application-space .as-step-btn--completed .as-step-marker--circle {
+    background: #f0fdf4;
+}
+
+.dark .candidate-application-space .as-step-btn--waiting .as-step-marker--circle {
+    background: #fffbeb;
+}
+
+.dark .candidate-application-space .as-score-banner {
+    background: #ecfdf5;
+    color: #065f46;
+}
+
+.dark .candidate-application-space .as-back-btn,
+.dark .candidate-application-space .as-detail-toolbar {
+    color: #475569;
+}
+
+/* -------------------------------------------------------------------------
+   Take test — same light UI as application progress (no dark gray cards)
+   ------------------------------------------------------------------------- */
+.candidate-application-space .tt-test-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.candidate-application-space .tt-hero {
+    background: linear-gradient(135deg, #1a1a8c 0%, #3730a3 50%, #6366f1 100%);
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(26, 26, 140, 0.2);
+}
+
+.candidate-application-space .tt-hero__title {
+    margin: 0 0 0.35rem;
+    font-size: 1.2rem;
+    font-weight: 800;
+}
+
+.candidate-application-space .tt-hero__desc {
+    margin: 0;
+    font-size: 0.92rem;
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.candidate-application-space .tt-hero__progress {
+    text-align: right;
+}
+
+.candidate-application-space .tt-hero__count {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.candidate-application-space .tt-hero__count-label {
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.candidate-application-space .tt-hero__bar {
+    margin-top: 0.75rem;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.candidate-application-space .tt-hero__bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: #fff;
+    transition: width 0.25s ease;
+}
+
+.candidate-application-space .tt-question {
+    background: #ffffff;
+    border: 1px solid #e8edf5;
+    border-radius: 14px;
+    padding: 1.35rem 1.5rem;
+    box-shadow: 0 2px 12px rgba(26, 26, 140, 0.06);
+}
+
+.candidate-application-space .tt-question__text {
+    margin: 0 0 1rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.45;
+}
+
+.candidate-application-space .tt-question__points {
+    color: #7c3aed;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.candidate-application-space .tt-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.candidate-application-space .tt-options__hint {
+    margin: 0 0 0.25rem;
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.candidate-application-space .tt-option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    background: #ffffff;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.candidate-application-space .tt-option:hover {
+    border-color: #c7d2fe;
+    background: #fafafe;
+}
+
+.candidate-application-space .tt-option:has(input:checked) {
+    border-color: #6366f1;
+    background: #eef2ff;
+}
+
+.candidate-application-space .tt-option__label {
+    color: #374151;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.candidate-application-space .tt-option input {
+    accent-color: #4f46e5;
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+}
+
+.candidate-application-space .tt-field {
+    width: 100%;
+    padding: 0.75rem 0.85rem;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    color: #374151;
+    background: #ffffff;
+    box-sizing: border-box;
+}
+
+.candidate-application-space .tt-field:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.candidate-application-space .tt-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding-bottom: 1.5rem;
+}
+
+.dark .candidate-application-space .tt-question {
+    background: #ffffff;
+    border-color: #e2e8f0;
+}
+
+.dark .candidate-application-space .tt-question__text {
+    color: #1e293b;
+}
+
+.dark .candidate-application-space .tt-option {
+    background: #ffffff;
+    border-color: #e5e7eb;
+}
+
+.dark .candidate-application-space .tt-option__label {
+    color: #374151;
+}
+
+.dark .candidate-application-space .tt-field {
+    background: #ffffff;
+    color: #374151;
+    border-color: #e5e7eb;
 }

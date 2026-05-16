@@ -1,6 +1,7 @@
 <x-filament-panels::page>
     @vite('resources/css/candidate-application-space.css')
 
+    <div class="candidate-application-space">
     @if ($isAdminViewing)
         <div
             style="background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:0.75rem 1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;">
@@ -187,4 +188,5 @@
     @else
         @include('filament.candidate.pages.partials.application-space-list')
     @endif
+    </div>
 </x-filament-panels::page>

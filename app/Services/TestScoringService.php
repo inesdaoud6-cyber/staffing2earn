@@ -96,10 +96,7 @@ class TestScoringService
 
         $level = (int) $response->level;
 
-        $questions = Question::query()
-            ->whereHas('tests', fn ($q) => $q->where('tests.id', $test->id))
-            ->where('level', $level)
-            ->get();
+        $questions = $this->questionsForTestLevel($test, $level);
 
         $questionResponses = $response->questionResponses()->get()->keyBy('question_id');
 
@@ -190,13 +187,40 @@ class TestScoringService
     }
 
     /**
+     * Maps application round (1, 2, 3…) to question.level within a test.
+     * Each job-offer test often only has questions at level 1 while rounds still increment.
+     */
+    public function resolveQuestionLevelForTestRound(Test $test, int $applicationRound): int
+    {
+        $levels = Question::query()
+            ->whereHas('tests', fn ($q) => $q->where('tests.id', $test->id))
+            ->distinct()
+            ->orderBy('level')
+            ->pluck('level')
+            ->map(fn ($level): int => (int) $level)
+            ->values();
+
+        if ($levels->isEmpty()) {
+            return max(1, $applicationRound);
+        }
+
+        if ($levels->contains($applicationRound)) {
+            return $applicationRound;
+        }
+
+        return $levels->first();
+    }
+
+    /**
      * @param  Collection<int, Question>  $questions
      */
-    public function questionsForTestLevel(Test $test, int $level): Collection
+    public function questionsForTestLevel(Test $test, int $applicationRound): Collection
     {
+        $questionLevel = $this->resolveQuestionLevelForTestRound($test, $applicationRound);
+
         return Question::query()
             ->whereHas('tests', fn ($q) => $q->where('tests.id', $test->id))
-            ->where('level', $level)
+            ->where('level', $questionLevel)
             ->get();
     }
 }

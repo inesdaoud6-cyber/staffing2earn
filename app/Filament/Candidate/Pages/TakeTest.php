@@ -9,11 +9,14 @@ use App\Models\CandidateNotification;
 use App\Models\Question;
 use App\Models\QuestionResponse;
 use App\Models\Response;
+use App\Filament\Candidate\Concerns\InteractsWithTakeTestAnswers;
 use App\Services\CandidateTestSubmissionService;
 use App\Services\TestScoringService;
 use Filament\Notifications\Notification;
+
 class TakeTest extends Page
 {
+    use InteractsWithTakeTestAnswers;
     protected static ?string $navigationIcon = 'heroicon-o-pencil-square';
     protected static string $view = 'filament.candidate.pages.take-test';
     protected static ?string $slug = 'take-test';
@@ -135,6 +138,8 @@ class TakeTest extends Page
                     : $stored;
             }
 
+            $this->ensureMcqAnswerDefaults();
+
             return;
         }
 
@@ -151,6 +156,17 @@ class TakeTest extends Page
 
         $this->totalQuestions = $this->getQuestions()->count();
         $this->syncWholeTestTimerUi();
+
+        if ($this->totalQuestions === 0) {
+            $this->pageStatus = 'no_questions';
+        }
+
+        $this->ensureMcqAnswerDefaults();
+    }
+
+    public function hydrate(): void
+    {
+        $this->ensureMcqAnswerDefaults();
     }
 
     public function getApplication(): ?ApplicationProgress
@@ -164,16 +180,13 @@ class TakeTest extends Page
     {
         $application = $this->getApplication();
 
-        if (! $application || ! $application->test_id) {
+        if (! $application || ! $application->test_id || ! $application->test) {
             return collect();
         }
 
-        return Question::whereHas('tests', function ($q) use ($application) {
-            $q->where('tests.id', $application->test_id);
-        })
-            ->where('level', $this->currentLevel)
-            ->with('answers')
-            ->get();
+        return app(TestScoringService::class)
+            ->questionsForTestLevel($application->test, $this->currentLevel)
+            ->load('answers');
     }
 
     public function updatedAnswers(): void
@@ -250,6 +263,7 @@ class TakeTest extends Page
             'title' => __('candidate.test_timer_expired_notification_title'),
             'message' => __('candidate.test_timer_expired_notification_body', ['level' => $this->currentLevel]),
             'offre_id' => $application->offre_id,
+            'application_progress_id' => $application->id,
         ]);
 
         $response = Response::query()
@@ -427,13 +441,33 @@ class TakeTest extends Page
         $outcome = $result['outcome'] ?? CandidateTestSubmissionService::OUTCOME_AWAITING_MANUAL;
 
         if ($outcome === CandidateTestSubmissionService::OUTCOME_ADVANCED) {
-            $this->currentLevel = (int) ($result['advanced_to_level'] ?? $this->currentLevel);
+            $application = $this->getApplication()?->fresh(['test']);
+
+            if ($application) {
+                $application->ensureWholeTestSessionDeadline();
+                $application->refresh();
+            }
+
+            $this->currentLevel = (int) ($result['advanced_to_level'] ?? $application?->current_level ?? $this->currentLevel);
             $this->alreadySubmitted = false;
             $this->answers = [];
+            $this->ensureMcqAnswerDefaults();
             $this->pageStatus = 'test';
             $this->totalQuestions = $this->getQuestions()->count();
             $this->answeredCount = 0;
             $this->syncWholeTestTimerUi();
+
+            if ($this->totalQuestions === 0) {
+                $this->pageStatus = 'no_questions';
+
+                Notification::make()
+                    ->title(__('candidate.take_test_no_questions_title'))
+                    ->body(__('candidate.take_test_no_questions_body'))
+                    ->warning()
+                    ->send();
+
+                return;
+            }
 
             Notification::make()
                 ->title(__('candidate.take_test_eligibility_passed_title'))
@@ -488,6 +522,7 @@ class TakeTest extends Page
             'title' => __('candidate.level_submitted_notification_title', ['level' => $this->currentLevel]),
             'message' => __('candidate.level_submitted_notification_body', ['level' => $this->currentLevel]),
             'offre_id' => $application->offre_id,
+            'application_progress_id' => $application->id,
         ]);
 
         $this->applySubmitOutcome($result);

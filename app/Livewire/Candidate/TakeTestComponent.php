@@ -8,6 +8,7 @@ use App\Models\Candidate;
 use App\Models\Question;
 use App\Models\QuestionResponse;
 use App\Models\Response;
+use App\Filament\Candidate\Concerns\InteractsWithTakeTestAnswers;
 use App\Services\CandidateTestSubmissionService;
 use App\Services\TestScoringService;
 use App\Services\CandidateService;
@@ -16,6 +17,7 @@ use Livewire\Component;
 
 class TakeTestComponent extends Component
 {
+    use InteractsWithTakeTestAnswers;
     public array $answers = [];
 
     public int $currentLevel = 1;
@@ -117,11 +119,19 @@ class TakeTestComponent extends Component
                         : $stored;
                 });
 
+            $this->ensureMcqAnswerDefaults();
+
             return;
         }
 
         $this->pageStatus = 'take_test';
         $this->totalQuestions = $this->getQuestions()->count();
+        $this->ensureMcqAnswerDefaults();
+    }
+
+    public function hydrate(): void
+    {
+        $this->ensureMcqAnswerDefaults();
     }
 
     public function getApplication(): ?ApplicationProgress
@@ -149,12 +159,13 @@ class TakeTestComponent extends Component
             return collect();
         }
 
-        $this->cachedQuestions = Question::whereHas('tests', function ($q) use ($application) {
-            $q->where('tests.id', $application->test_id);
-        })
-            ->where('level', $this->currentLevel)
-            ->with('answers')
-            ->get();
+        $application->loadMissing('test');
+
+        $this->cachedQuestions = $application->test
+            ? app(TestScoringService::class)
+                ->questionsForTestLevel($application->test, $this->currentLevel)
+                ->load('answers')
+            : collect();
 
         return $this->cachedQuestions;
     }

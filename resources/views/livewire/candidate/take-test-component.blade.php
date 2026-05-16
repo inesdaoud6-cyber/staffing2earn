@@ -106,7 +106,8 @@
         </div>
 
         @foreach($questions as $question)
-        <div style="background:white;border-radius:14px;padding:1.5rem;margin-bottom:1rem;border:1px solid #ede9fe;box-shadow:0 2px 8px rgba(26,26,140,0.05);">
+        @php($mcqOptions = $this->mcqOptionsForQuestion($question))
+        <div wire:key="take-test-question-{{ $question->id }}" style="background:white;border-radius:14px;padding:1.5rem;margin-bottom:1rem;border:1px solid #ede9fe;box-shadow:0 2px 8px rgba(26,26,140,0.05);">
             <div style="display:flex;align-items:flex-start;gap:0.75rem;margin-bottom:1rem;">
                 <span style="flex-shrink:0;width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#1a1a8c,#3730a3);color:white;font-size:0.8rem;font-weight:800;display:flex;align-items:center;justify-content:center;">
                     {{ $loop->iteration }}
@@ -123,29 +124,29 @@
                 </p>
             </div>
 
-            @if($question->component === 'radio' && $question->possible_answers)
+            @if($question->component === 'radio' && count($mcqOptions) > 0)
                 <div style="display:flex;flex-direction:column;gap:0.5rem;">
-                    @foreach($question->possible_answers as $answer)
-                    <label style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;border:1.5px solid {{ isset($answers[$question->id]) && $answers[$question->id] === $answer ? '#1a1a8c' : '#e5e7eb' }};border-radius:10px;cursor:pointer;background:{{ isset($answers[$question->id]) && $answers[$question->id] === $answer ? '#f0f1ff' : 'white' }};transition:all 0.15s;">
+                    @foreach($mcqOptions as $option)
+                    <label wire:key="take-test-q{{ $question->id }}-r{{ $loop->index }}" style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;border:1.5px solid {{ isset($answers[$question->id]) && $answers[$question->id] === $option ? '#1a1a8c' : '#e5e7eb' }};border-radius:10px;cursor:pointer;background:{{ isset($answers[$question->id]) && $answers[$question->id] === $option ? '#f0f1ff' : 'white' }};transition:all 0.15s;">
                         <input type="radio"
                             wire:model.live="answers.{{ $question->id }}"
-                            value="{{ $answer }}"
+                            value="{{ $option }}"
                             style="accent-color:#1a1a8c;width:16px;height:16px;flex-shrink:0;">
-                        <span style="color:#374151;font-size:0.95rem;">{{ $answer }}</span>
+                        <span style="color:#374151;font-size:0.95rem;">{{ $option }}</span>
                     </label>
                     @endforeach
                 </div>
 
-            @elseif($question->component === 'checkbox' && $question->possible_answers)
+            @elseif($question->component === 'checkbox' && count($mcqOptions) > 0)
                 <div style="display:flex;flex-direction:column;gap:0.5rem;">
                     <p style="color:#6b7280;font-size:0.85rem;margin:0 0 0.25rem;">{{ __('candidate.qcm_select_all_that_apply') }}</p>
-                    @foreach($question->possible_answers as $answer)
-                    <label style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;border:1.5px solid {{ is_array($answers[$question->id] ?? null) && in_array($answer, $answers[$question->id], true) ? '#1a1a8c' : '#e5e7eb' }};border-radius:10px;cursor:pointer;background:{{ is_array($answers[$question->id] ?? null) && in_array($answer, $answers[$question->id], true) ? '#f0f1ff' : 'white' }};transition:all 0.15s;">
+                    @foreach($mcqOptions as $option)
+                    <label wire:key="take-test-q{{ $question->id }}-c{{ $loop->index }}" style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;border:1.5px solid {{ is_array($answers[$question->id] ?? null) && in_array($option, $answers[$question->id], true) ? '#1a1a8c' : '#e5e7eb' }};border-radius:10px;cursor:pointer;background:{{ is_array($answers[$question->id] ?? null) && in_array($option, $answers[$question->id], true) ? '#f0f1ff' : 'white' }};transition:all 0.15s;">
                         <input type="checkbox"
                             wire:model.live="answers.{{ $question->id }}"
-                            value="{{ $answer }}"
+                            value="{{ $option }}"
                             style="accent-color:#1a1a8c;width:16px;height:16px;flex-shrink:0;">
-                        <span style="color:#374151;font-size:0.95rem;">{{ $answer }}</span>
+                        <span style="color:#374151;font-size:0.95rem;">{{ $option }}</span>
                     </label>
                     @endforeach
                 </div>
@@ -163,11 +164,11 @@
                     wire:model.live="answers.{{ $question->id }}"
                     style="padding:0.7rem 0.9rem;border:1.5px solid #e5e7eb;border-radius:10px;font-size:0.95rem;color:#374151;width:100%;outline:none;box-sizing:border-box;">
 
-            @elseif($question->component === 'list' && $question->possible_answers)
+            @elseif($question->component === 'list' && count($mcqOptions) > 0)
                 <select wire:model.live="answers.{{ $question->id }}"
                     style="width:100%;padding:0.7rem 0.9rem;border:1.5px solid #e5e7eb;border-radius:10px;font-size:0.95rem;color:#374151;background:white;outline:none;box-sizing:border-box;">
                     <option value="">{{ __('-- Choisir --') }}</option>
-                    @foreach($question->possible_answers as $opt)
+                    @foreach($mcqOptions as $opt)
                     <option value="{{ $opt }}">{{ $opt }}</option>
                     @endforeach
                 </select>

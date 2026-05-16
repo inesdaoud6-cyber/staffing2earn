@@ -385,11 +385,16 @@ class ReviewApplicationLevel extends Page implements HasForms
                             'user_id' => $this->record->candidate->user_id,
                             'type' => 'info',
                             'title' => __('admin.candidate_notif_cv_accepted_title'),
-                            'message' => __('admin.candidate_notif_cv_accepted_body_with_offer', [
-                                'offer' => $this->record->offre->title,
-                                'test' => $this->record->test?->name ?? '',
-                            ]),
+                            'message' => $this->record->offre
+                                ? __('admin.candidate_notif_cv_accepted_body_with_offer', [
+                                    'offer' => $this->record->offre->title,
+                                    'test' => $this->record->test?->name ?? '',
+                                ])
+                                : __('admin.candidate_notif_cv_accepted_body_open', [
+                                    'test' => $this->record->test?->name ?? '',
+                                ]),
                             'offre_id' => $this->record->offre_id,
+                            'application_progress_id' => $this->record->id,
                         ]);
 
                         Notification::make()
@@ -438,6 +443,7 @@ class ReviewApplicationLevel extends Page implements HasForms
                                 ? __('admin.candidate_notif_rejected_body_with_offer', ['offer' => $this->record->offre->title])
                                 : __('admin.candidate_notif_rejected_body_open'),
                             'offre_id' => $this->record->offre_id,
+                            'application_progress_id' => $this->record->id,
                         ]);
 
                         Notification::make()

@@ -99,7 +99,7 @@ class NotificationBell extends Component
             $notif->update(['is_read' => true]);
         }
 
-        return $this->redirect(route('filament.candidate.pages.notifications'));
+        return $this->redirect($notif->url);
     }
 
     public function markAllRead(): void

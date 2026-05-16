@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\CandidateNotificationLinks;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,6 +18,7 @@ class CandidateNotification extends Model
         'message',
         'is_read',
         'offre_id',
+        'application_progress_id',
     ];
 
     protected function casts(): array
@@ -36,22 +38,21 @@ class CandidateNotification extends Model
         return $this->belongsTo(Offre::class);
     }
 
+    public function applicationProgress(): BelongsTo
+    {
+        return $this->belongsTo(ApplicationProgress::class, 'application_progress_id');
+    }
+
+    public function resolveApplicationProgressId(): ?int
+    {
+        return CandidateNotificationLinks::resolveApplicationProgressId($this);
+    }
+
     /**
-     * Where clicking this notification should take the candidate. Falls back
-     * to the notifications page so a bogus type can never produce a dead link.
+     * Where clicking this notification should take the candidate.
      */
     public function getUrlAttribute(): string
     {
-        $applicationsRoute  = route('filament.candidate.pages.applications');
-        $offresRoute        = route('filament.candidate.pages.choix-candidature');
-        $notificationsRoute = route('filament.candidate.pages.notifications');
-
-        return match ($this->type) {
-            'offre' => $this->offre_id
-                ? $offresRoute . '#offre-' . $this->offre_id
-                : $offresRoute,
-            'application', 'validated', 'rejected', 'result' => $applicationsRoute,
-            default => $notificationsRoute,
-        };
+        return CandidateNotificationLinks::resolve($this);
     }
 }

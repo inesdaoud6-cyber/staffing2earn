@@ -528,6 +528,7 @@ class ApplicationProgressResource extends Resource
                                 ? __('admin.candidate_notif_validated_body_with_offer', ['offer' => $record->offre->title])
                                 : __('admin.candidate_notif_validated_body_open'),
                             'offre_id' => $record->offre_id,
+                            'application_progress_id' => $record->id,
                         ]);
                         Notification::make()
                             ->title(__('admin.application_toast_application_validated'))
@@ -551,6 +552,7 @@ class ApplicationProgressResource extends Resource
                                 ? __('admin.candidate_notif_rejected_body_with_offer', ['offer' => $record->offre->title])
                                 : __('admin.candidate_notif_rejected_body_open'),
                             'offre_id' => $record->offre_id,
+                            'application_progress_id' => $record->id,
                         ]);
                         Notification::make()
                             ->title(__('admin.application_toast_rejected'))
@@ -617,6 +619,7 @@ class ApplicationProgressResource extends Resource
                     'new' => (string) $newLevel,
                 ]),
                 'offre_id' => $record->offre_id,
+                'application_progress_id' => $record->id,
             ]);
         }
 
@@ -660,6 +663,7 @@ class ApplicationProgressResource extends Resource
             'title' => __('admin.candidate_notif_score_title'),
             'message' => __('admin.candidate_notif_score_body', ['score' => (string) $record->main_score]),
             'offre_id' => $record->offre_id,
+            'application_progress_id' => $record->id,
         ]);
         Notification::make()
             ->title(__('admin.application_toast_score_published'))

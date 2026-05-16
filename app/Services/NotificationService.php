@@ -8,15 +8,22 @@ use Illuminate\Support\Collection;
 
 class NotificationService
 {
-    public function send(User $user, string $type, string $title, string $message, ?int $offreId = null): CandidateNotification
-    {
+    public function send(
+        User $user,
+        string $type,
+        string $title,
+        string $message,
+        ?int $offreId = null,
+        ?int $applicationProgressId = null,
+    ): CandidateNotification {
         return CandidateNotification::create([
-            'user_id'  => $user->id,
-            'type'     => $type,
-            'title'    => $title,
-            'message'  => $message,
-            'is_read'  => false,
+            'user_id' => $user->id,
+            'type' => $type,
+            'title' => $title,
+            'message' => $message,
+            'is_read' => false,
             'offre_id' => $offreId,
+            'application_progress_id' => $applicationProgressId,
         ]);
     }
 

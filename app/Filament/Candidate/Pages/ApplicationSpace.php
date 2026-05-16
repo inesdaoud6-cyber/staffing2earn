@@ -73,6 +73,30 @@ class ApplicationSpace extends Page
     public function mount(): void
     {
         $this->loadApplications();
+        $this->openApplicationFromQueryString();
+    }
+
+    protected function openApplicationFromQueryString(): void
+    {
+        $applicationId = request()->query('application');
+
+        if ($applicationId === null || $applicationId === '' || ! ctype_digit((string) $applicationId)) {
+            return;
+        }
+
+        $id = (int) $applicationId;
+
+        if (! $this->candidateId || ! $this->applicationsQuery()->whereKey($id)->exists()) {
+            return;
+        }
+
+        $view = request()->query('view', 'progress');
+
+        if ($view === 'details') {
+            $this->showApplicationDetails($id);
+        } else {
+            $this->showApplicationProgress($id);
+        }
     }
 
     public function loadApplications(): void
@@ -476,29 +500,53 @@ class ApplicationSpace extends Page
 
     public function formatCandidateQuestionScore(ApplicationProgress $app, QuestionResponse $qr): ?string
     {
-        if (! $app->score_published) {
-            return null;
-        }
-
         $question = $qr->question;
         if ($question && ! $question->scorable) {
             return null;
         }
 
         $value = $qr->obtained_score ?? $qr->auto_score;
+        if ($value === null) {
+            return null;
+        }
 
-        return $this->formatPublishedScore($value !== null ? (float) $value : null);
+        if (! $app->score_published && ! $this->candidateMayViewProvisionalScores($app)) {
+            return null;
+        }
+
+        $formatted = $this->formatPublishedScore((float) $value);
+        if ($formatted === null) {
+            return null;
+        }
+
+        return $app->score_published
+            ? $formatted
+            : $formatted.' '.__('candidate.applications.score_provisional_suffix');
     }
 
     public function publishedMainScoreLabel(ApplicationProgress $app): ?string
     {
-        if (! $app->score_published) {
+        if ($app->main_score === null) {
+            return null;
+        }
+
+        if (! $app->score_published && ! $this->candidateMayViewProvisionalScores($app)) {
             return null;
         }
 
         $formatted = $this->formatPublishedScore((float) $app->main_score);
+        $label = ($formatted !== null && $formatted !== '' ? $formatted : '0').'/100';
 
-        return ($formatted !== null && $formatted !== '' ? $formatted : '0').'/100';
+        return $app->score_published
+            ? $label
+            : $label.' '.__('candidate.applications.score_provisional_suffix');
+    }
+
+    protected function candidateMayViewProvisionalScores(ApplicationProgress $app): bool
+    {
+        return $app->responses()
+            ->whereNotNull('test_score')
+            ->exists();
     }
 
     /**

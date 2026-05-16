@@ -200,19 +200,16 @@
                         </div>
 
                         <div class="notif-row-actions">
-                            @if($offreActive)
-                                <a href="{{ route('filament.candidate.pages.choix-candidature') . '#offre-' . $offre->id }}"
-                                   class="notif-btn notif-btn-primary">
-                                    <span>{{ __('View offer') }}</span>
-                                    @svg('heroicon-o-arrow-right', 'notif-btn-icon')
-                                </a>
-                            @elseif(in_array($notif->type, ['validated', 'rejected', 'application', 'result'], true))
-                                <a href="{{ route('filament.candidate.pages.applications') }}"
-                                   class="notif-btn notif-btn-primary">
-                                    <span>{{ __('View applications') }}</span>
-                                    @svg('heroicon-o-arrow-right', 'notif-btn-icon')
-                                </a>
-                            @endif
+                            <a href="{{ $notif->url }}" class="notif-btn notif-btn-primary">
+                                <span>
+                                    @if($offreActive)
+                                        {{ __('View offer') }}
+                                    @else
+                                        {{ __('Open') }}
+                                    @endif
+                                </span>
+                                @svg('heroicon-o-arrow-right', 'notif-btn-icon')
+                            </a>
 
                             <button type="button"
                                     wire:click="toggleRead({{ $notif->id }})"

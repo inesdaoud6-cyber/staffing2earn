@@ -31,6 +31,7 @@ class FreeApplicationWorkflow
             'title' => __('admin.candidate_notif_free_cv_accepted_title'),
             'message' => __('admin.candidate_notif_free_cv_accepted_body'),
             'offre_id' => null,
+            'application_progress_id' => $record->id,
         ]);
 
         Notification::make()
@@ -72,6 +73,7 @@ class FreeApplicationWorkflow
                 'test' => $test->name,
             ]),
             'offre_id' => null,
+            'application_progress_id' => $record->id,
         ]);
 
         Notification::make()
@@ -99,6 +101,7 @@ class FreeApplicationWorkflow
             'title' => __('admin.candidate_notif_free_potential_title'),
             'message' => __('admin.candidate_notif_free_potential_body'),
             'offre_id' => null,
+            'application_progress_id' => $record->id,
         ]);
 
         Notification::make()
