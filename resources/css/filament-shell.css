@@ -93,6 +93,23 @@
     border-top-color: rgba(139, 92, 246, 0.20);
 }
 
+/* Candidate panel: pin About (footer group) to the bottom of the nav */
+.fi-panel-candidate .fi-sidebar-nav-groups {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.fi-panel-candidate .fi-sidebar-nav-groups > .fi-sidebar-group:last-child {
+    margin-top: auto;
+    padding-top: 0.75rem;
+    border-top: 1px dashed rgba(139, 92, 246, 0.12);
+}
+
+.dark .fi-panel-candidate .fi-sidebar-nav-groups > .fi-sidebar-group:last-child {
+    border-top-color: rgba(139, 92, 246, 0.20);
+}
+
 /* ---------- Nav items ---------- */
 .fi-sidebar-item-button {
     border-radius: 0.625rem !important;

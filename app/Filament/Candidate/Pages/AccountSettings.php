@@ -19,13 +19,24 @@ class AccountSettings extends Page
 {
     use InteractsWithForms;
 
-    protected static bool $shouldRegisterNavigation = false;
+    protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
+
+    protected static ?int $navigationSort = 2;
+
+    protected static ?string $navigationGroup = 'candidate.account';
+
     protected static string $view = 'filament.candidate.pages.account-settings';
+
     protected static ?string $slug = 'account-settings';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('nav.account_settings');
+    }
 
     public function getTitle(): string
     {
-        return __('My Profile');
+        return __('nav.account_settings');
     }
 
     public ?array $data = [];

@@ -15,15 +15,17 @@ class Dashboard extends Page
 
     public function getTitle(): string
     {
-        return __('nav.workspace_management');
+        return __('nav.home');
     }
 
     public static function getNavigationLabel(): string
     {
-        return __('nav.workspace_management');
+        return __('nav.home');
     }
+
     protected static ?int $navigationSort = 1;
-    protected static ?string $navigationGroup = 'candidate.workspace';
+
+    protected static ?string $navigationGroup = 'candidate.main';
 
     public string $userName = '';
     public bool $isAdminViewing = false;

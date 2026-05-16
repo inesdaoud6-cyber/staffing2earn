@@ -14,13 +14,24 @@ class MyProfile extends Page
 {
     use WithFileUploads;
 
-    protected static bool $shouldRegisterNavigation = false;
+    protected static ?string $navigationIcon = 'heroicon-o-user';
+
+    protected static ?int $navigationSort = 1;
+
+    protected static ?string $navigationGroup = 'candidate.account';
+
     protected static string $view = 'filament.candidate.pages.my-profile';
+
     protected static ?string $slug = 'my-profile';
+
+    public static function getNavigationLabel(): string
+    {
+        return __('nav.my_profile');
+    }
 
     public function getTitle(): string
     {
-        return __('My Profile');
+        return __('nav.my_profile');
     }
 
     public $user;

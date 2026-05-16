@@ -20,9 +20,9 @@ class ChoixCandidature extends Page
 
     protected static ?string $slug = 'choix-candidature';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 2;
 
-    protected static ?string $navigationGroup = 'candidate.applications';
+    protected static ?string $navigationGroup = 'candidate.main';
 
     public static function getNavigationLabel(): string
     {

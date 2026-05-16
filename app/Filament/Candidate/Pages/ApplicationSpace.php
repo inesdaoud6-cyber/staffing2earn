@@ -19,7 +19,7 @@ class ApplicationSpace extends Page
 {
     use WithPagination;
 
-    protected static ?string $navigationIcon = 'heroicon-o-briefcase';
+    protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-list';
 
     public const APPLICATIONS_PER_PAGE = 12;
 
@@ -27,13 +27,13 @@ class ApplicationSpace extends Page
 
     protected static ?string $slug = 'applications';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 3;
 
-    protected static ?string $navigationGroup = 'candidate.applications';
+    protected static ?string $navigationGroup = 'candidate.main';
 
     public static function getNavigationLabel(): string
     {
-        return __('My Applications');
+        return __('nav.my_applications');
     }
 
     public function getTitle(): string
@@ -46,7 +46,7 @@ class ApplicationSpace extends Page
             return $this->applicationCardTitle($app).' — '.__('candidate.applications.progress_heading');
         }
 
-        return __('My Applications');
+        return __('nav.my_applications');
     }
 
     public string $candidateName = '';

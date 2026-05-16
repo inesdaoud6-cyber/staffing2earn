@@ -50,24 +50,20 @@ class CandidatePanelProvider extends PanelProvider
                 fn () => view('filament.partials.sidebar-user-card')
             )
             ->navigationGroups([
-                NavigationGroup::make('candidate.workspace')
-                    ->label(fn () => __('nav.workspace_management'))
-                    ->icon('heroicon-o-home'),
-                NavigationGroup::make('candidate.applications')
-                    ->label(fn () => __('nav.applications_management'))
-                    ->icon('heroicon-o-briefcase'),
+                NavigationGroup::make('candidate.main')
+                    ->label(fn () => __('nav.candidate_menu')),
                 NavigationGroup::make('candidate.account')
-                    ->label(fn () => __('nav.account_management'))
-                    ->icon('heroicon-o-user-circle')
-                    ->collapsed(),
+                    ->label(fn () => __('nav.account_management')),
+                NavigationGroup::make('candidate.footer')
+                    ->label(''),
             ])
             ->userMenuItems([
                 MenuItem::make()
-                    ->label(fn () => __('Mon Profil'))
+                    ->label(fn () => __('nav.my_profile'))
                     ->icon('heroicon-o-user-circle')
                     ->url(fn () => route('filament.candidate.pages.my-profile')),
                 MenuItem::make()
-                    ->label(fn () => __('Paramètres du Compte'))
+                    ->label(fn () => __('nav.account_settings'))
                     ->icon('heroicon-o-cog-6-tooth')
                     ->url(fn () => route('filament.candidate.pages.account-settings')),
                 MenuItem::make()

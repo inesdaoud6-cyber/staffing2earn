@@ -11,9 +11,9 @@ class Notifications extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-bell';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 4;
 
-    protected static ?string $navigationGroup = 'candidate.workspace';
+    protected static ?string $navigationGroup = 'candidate.main';
 
     protected static string $view = 'filament.candidate.pages.notifications';
 
@@ -21,7 +21,7 @@ class Notifications extends Page
 
     public static function getNavigationLabel(): string
     {
-        return __('My Notifications');
+        return __('nav.my_notifications');
     }
 
     public function getTitle(): string
