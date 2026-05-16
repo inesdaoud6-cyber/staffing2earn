@@ -11,6 +11,15 @@ class Response extends Model
     protected $fillable = [
         'application_id',
         'level',
+        'test_score',
+        'eligibility_passed',
+        'talent_passed',
+    ];
+
+    protected $casts = [
+        'test_score' => 'decimal:2',
+        'eligibility_passed' => 'boolean',
+        'talent_passed' => 'boolean',
     ];
 
     public function application(): BelongsTo

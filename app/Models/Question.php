@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\TestScoringService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -133,20 +134,12 @@ class Question extends Model
         return [];
     }
 
-    public function scoreCandidateAnswer(mixed $answer): float
+    public function isCandidateAnswerCorrect(mixed $answer): bool
     {
-        if (! $this->scorable) {
-            return 0.0;
-        }
-
         if (in_array($this->component, ['radio', 'list'], true)) {
             $correct = $this->answers()->where('is_correct', true)->first();
 
-            if ($correct && (string) $correct->text === (string) $answer) {
-                return (float) ($this->max_note ?? 0);
-            }
-
-            return 0.0;
+            return $correct && (string) $correct->text === (string) $answer;
         }
 
         if ($this->component === 'checkbox') {
@@ -158,14 +151,18 @@ class Question extends Model
             $sortedCorrect = $correct;
             sort($sortedCorrect);
 
-            if ($correct !== [] && $selected === $sortedCorrect) {
-                return (float) ($this->max_note ?? 0);
-            }
-
-            return 0.0;
+            return $correct !== [] && $selected === $sortedCorrect;
         }
 
-        return 0.0;
+        return false;
+    }
+
+    /**
+     * Question score in % (max_note + second_ratio bonus when correct).
+     */
+    public function scoreCandidateAnswer(mixed $answer): float
+    {
+        return app(TestScoringService::class)->scoreQuestionPercent($this, $answer);
     }
 
     public function serializeCandidateAnswer(mixed $answer): ?string

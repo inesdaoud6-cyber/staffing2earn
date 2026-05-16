@@ -10,6 +10,7 @@ use App\Models\QuestionResponse;
 use App\Models\Response;
 use App\Models\Test;
 use App\Services\FreeApplicationWorkflow;
+use App\Services\TestScoringService;
 use Filament\Actions\Action;
 use Filament\Forms;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -47,6 +48,10 @@ class ReviewApplicationLevel extends Page implements HasForms
 
         abort_unless(static::getResource()::canEdit($this->record), 403);
 
+        if ($this->showsTestSection()) {
+            $this->ensureReviewQuestionResponses();
+        }
+
         $this->form->fill($this->showsTestSection() ? $this->buildTestReviewFormData() : []);
     }
 
@@ -82,10 +87,16 @@ class ReviewApplicationLevel extends Page implements HasForms
                 Forms\Components\Section::make(__('admin.application_test_answers_section'))
                     ->description(__('admin.application_test_answers_level_hint', ['level' => (string) $this->reviewLevel]))
                     ->schema([
+                        Forms\Components\Placeholder::make('test_score_summary')
+                            ->label(__('admin.test_score'))
+                            ->content(fn (): HtmlString => $this->getTestScoreSummaryHtml())
+                            ->columnSpanFull()
+                            ->visible(fn (): bool => $this->hasResponseForReviewLevel()),
                         Forms\Components\Repeater::make('level_review_items')
                             ->label('')
                             ->schema([
                                 Forms\Components\Hidden::make('question_response_id'),
+                                Forms\Components\Hidden::make('needs_manual'),
                                 Forms\Components\TextInput::make('question_label')
                                     ->label(__('admin.application_review_question_label'))
                                     ->disabled()
@@ -99,13 +110,20 @@ class ReviewApplicationLevel extends Page implements HasForms
                                     ->columnSpanFull(),
                                 Forms\Components\TextInput::make('auto_score')
                                     ->label(__('admin.application_review_auto_score'))
+                                    ->suffix('%')
                                     ->disabled()
                                     ->dehydrated(true),
                                 Forms\Components\TextInput::make('manual_score')
                                     ->label(__('admin.application_review_manual_score'))
                                     ->numeric()
+                                    ->minValue(0)
+                                    ->maxValue(100)
                                     ->step(0.01)
-                                    ->placeholder(__('admin.application_review_manual_placeholder')),
+                                    ->suffix('%')
+                                    ->placeholder(__('admin.application_review_manual_placeholder'))
+                                    ->helperText(fn (Forms\Get $get): string => $get('needs_manual')
+                                        ? __('admin.manual_score_open_hint')
+                                        : __('admin.manual_score_override_hint')),
                             ])
                             ->columns(2)
                             ->defaultItems(0)
@@ -159,15 +177,81 @@ class ReviewApplicationLevel extends Page implements HasForms
         return (int) ($this->resolveResponseForReviewLevel()?->level ?? $this->reviewLevel);
     }
 
+    private function getTestScoreSummaryHtml(): HtmlString
+    {
+        $response = $this->resolveResponseForReviewLevel();
+        $test = $this->record->test;
+
+        if (! $response || $test === null) {
+            return new HtmlString('<p class="text-sm text-gray-500">—</p>');
+        }
+
+        $score = $response->test_score !== null
+            ? number_format((float) $response->test_score, 2).'%'
+            : '—';
+
+        $eligibility = (float) ($test->eligibility_threshold ?? 0);
+        $talent = (float) ($test->talent_threshold ?? 0);
+
+        $eligibilityLine = $response->eligibility_passed
+            ? __('admin.test_eligibility_passed', ['threshold' => $eligibility])
+            : __('admin.test_eligibility_failed', ['threshold' => $eligibility]);
+
+        $talentLine = $response->talent_passed
+            ? __('admin.test_talent_passed', ['threshold' => $talent])
+            : __('admin.test_talent_not_reached', ['threshold' => $talent]);
+
+        $applicationScore = $this->record->main_score !== null
+            ? number_format((float) $this->record->main_score, 2).'%'
+            : '—';
+
+        $pendingManual = app(TestScoringService::class)->responseHasPendingManualReview($response)
+            ? __('admin.test_pending_manual_review')
+            : __('admin.test_auto_score_complete');
+
+        return new HtmlString(
+            '<div class="space-y-1 text-sm">'
+            .'<p><strong>'.e(__('admin.test_score')).':</strong> '.e($score).'</p>'
+            .'<p><strong>'.e(__('admin.application_score')).':</strong> '.e($applicationScore).'</p>'
+            .'<p>'.e($eligibilityLine).'</p>'
+            .'<p>'.e($talentLine).'</p>'
+            .'<p class="text-gray-600 dark:text-gray-400">'.e($pendingManual).'</p>'
+            .'</div>'
+        );
+    }
+
+    private function ensureReviewQuestionResponses(): void
+    {
+        $response = $this->resolveResponseForReviewLevel();
+        $test = $this->record->test;
+
+        if (! $response || ! $test) {
+            return;
+        }
+
+        app(TestScoringService::class)->syncScorableQuestionResponses(
+            $response,
+            $test,
+            $this->responseLevelForScoring()
+        );
+    }
+
     private function buildTestReviewFormData(): array
     {
         $response = $this->resolveResponseForReviewLevel();
-        $response?->loadMissing(['questionResponses.question', 'questionResponses.answer']);
+        $test = $this->record->test;
 
-        $items = [];
-        if (! $response) {
+        if (! $response || ! $test) {
             return ['level_review_items' => []];
         }
+
+        $response->loadMissing(['questionResponses.question', 'questionResponses.answer']);
+
+        $scoring = app(TestScoringService::class);
+        $questions = $scoring->questionsForTestLevel($test, $this->responseLevelForScoring())
+            ->where('scorable', true);
+
+        $byQuestionId = $response->questionResponses->keyBy('question_id');
 
         $locale = app()->getLocale();
         $field = match ($locale) {
@@ -176,18 +260,24 @@ class ReviewApplicationLevel extends Page implements HasForms
             default => 'question_en',
         };
 
-        foreach ($response->questionResponses as $qr) {
-            $q = $qr->question;
-            $label = $q
-                ? (string) ($q->{$field} ?? $q->question_en ?? $q->question_fr ?? '')
-                : ('#'.$qr->question_id);
+        $items = [];
+
+        foreach ($questions as $q) {
+            $qr = $byQuestionId->get($q->id);
+            if (! $qr) {
+                continue;
+            }
+
+            $label = (string) ($q->{$field} ?? $q->question_en ?? $q->question_fr ?? '');
+            $needsManual = ! $scoring->isAutoScorableComponent($q->component);
 
             $items[] = [
                 'question_response_id' => $qr->id,
+                'needs_manual' => $needsManual,
                 'question_label' => $label !== '' ? $label : ('#'.$qr->question_id),
                 'answer_preview' => $this->formatAnswerPreview($qr),
                 'auto_score' => (string) $qr->auto_score,
-                'manual_score' => $qr->manual_score,
+                'manual_score' => $qr->manual_score > 0 ? $qr->manual_score : null,
             ];
         }
 
@@ -215,13 +305,13 @@ class ReviewApplicationLevel extends Page implements HasForms
 
             $manualRaw = $row['manual_score'] ?? null;
             $useManual = $manualRaw !== null && $manualRaw !== '';
-            $manual = $useManual ? (float) $manualRaw : 0.0;
+            $manual = $useManual ? min(100, max(0, (float) $manualRaw)) : 0.0;
             $auto = (float) $qr->auto_score;
             $obtained = $useManual ? $manual : $auto;
 
             $qr->update([
                 'manual_score' => $useManual ? $manual : 0.0,
-                'obtained_score' => $obtained,
+                'obtained_score' => min(100, round($obtained, 2)),
             ]);
         }
 

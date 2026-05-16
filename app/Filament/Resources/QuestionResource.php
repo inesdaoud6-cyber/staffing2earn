@@ -154,10 +154,23 @@ class QuestionResource extends Resource
                     ->visible(fn ($get) => (bool) $get('auto_evaluation') && $get('component') === 'text')
                     ->nullable(),
 
-                Forms\Components\TextInput::make('max_note')->label(__('admin.max_score'))->numeric()->default(0),
-                Forms\Components\TextInput::make('second_ratio')->label(__('admin.second_ratio'))->numeric()->default(0),
+                Forms\Components\TextInput::make('max_note')
+                    ->label(__('admin.max_score'))
+                    ->numeric()
+                    ->minValue(0)
+                    ->maxValue(100)
+                    ->default(0)
+                    ->suffix('%')
+                    ->helperText(__('admin.max_score_percent_hint')),
+                Forms\Components\TextInput::make('second_ratio')
+                    ->label(__('admin.second_ratio'))
+                    ->numeric()
+                    ->minValue(0)
+                    ->maxValue(100)
+                    ->default(0)
+                    ->suffix('%')
+                    ->helperText(__('admin.second_ratio_percent_hint')),
                 Forms\Components\Textarea::make('user_note')->label(__('admin.candidate_note')),
-                Forms\Components\Textarea::make('note_rule')->label(__('admin.scoring_rule')),
             ])->columns(2),
         ]);
     }

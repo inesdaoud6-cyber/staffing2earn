@@ -750,6 +750,23 @@ class ApplicationSpace extends Page
             ];
         }
 
+        $isRejectedThisRound = $hasResponse
+            && $app->level_status === 'rejected'
+            && (int) $app->current_level === $responseLevel;
+
+        if ($isRejectedThisRound) {
+            return [
+                'offer_step' => $offerStep,
+                'kind' => 'test',
+                'test_number' => $testNumber,
+                'response_level' => $responseLevel,
+                'circle_label' => __('candidate.applications.step_test_not_passed'),
+                'state' => 'rejected',
+                'line_state' => $this->resolveConnectorLineState('rejected'),
+                'has_response' => true,
+            ];
+        }
+
         if ($app->status === 'validated') {
             $state = 'completed';
             $circleKey = $hasResponse

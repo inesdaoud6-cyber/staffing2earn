@@ -85,7 +85,6 @@ class CreateQuestionsForm extends Page implements HasForms
             'max_note' => 1,
             'second_ratio' => 0,
             'user_note' => null,
-            'note_rule' => null,
         ];
     }
 
@@ -202,12 +201,24 @@ class CreateQuestionsForm extends Page implements HasForms
                             Forms\Components\TextInput::make('max_note')
                                 ->label(__('admin.max_score'))
                                 ->numeric()
-                                ->default(1),
+                                ->minValue(0)
+                                ->maxValue(100)
+                                ->default(0)
+                                ->suffix('%')
+                                ->helperText(__('admin.max_score_percent_hint')),
                             Forms\Components\TextInput::make('second_ratio')
                                 ->label(__('admin.second_ratio'))
                                 ->numeric()
-                                ->default(0),
+                                ->minValue(0)
+                                ->maxValue(100)
+                                ->default(0)
+                                ->suffix('%')
+                                ->helperText(__('admin.second_ratio_percent_hint')),
                         ]),
+                        Forms\Components\Textarea::make('user_note')
+                            ->label(__('admin.candidate_note'))
+                            ->rows(2)
+                            ->columnSpanFull(),
                     ])
                     ->columnSpanFull(),
             ])
@@ -304,7 +315,6 @@ class CreateQuestionsForm extends Page implements HasForms
             'max_note' => (float) ($item['max_note'] ?? 0),
             'second_ratio' => (float) ($item['second_ratio'] ?? 0),
             'user_note' => $item['user_note'] ?? null,
-            'note_rule' => $item['note_rule'] ?? null,
             'possible_answers' => QuestionFormOptions::isMcqComponent($component) ? $possible : null,
         ];
     }

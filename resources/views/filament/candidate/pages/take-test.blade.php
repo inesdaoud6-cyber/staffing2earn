@@ -31,12 +31,50 @@
             <p class="text-indigo-900/80 dark:text-indigo-200/80">{{ __('candidate.take_test_waiting_assignment_body') }}</p>
         </div>
 
+    @elseif ($this->pageStatus === 'level_eligibility_failed')
+        <div class="rounded-xl border border-red-200 bg-red-50 p-10 text-center dark:border-red-900 dark:bg-red-950/40">
+            <div class="mb-4 text-4xl">❌</div>
+            <h2 class="mb-2 text-xl font-bold text-red-950 dark:text-red-100">{{ __('candidate.take_test_eligibility_failed_title') }}</h2>
+            @include('filament.candidate.pages.partials.take-test-result-summary', [
+                'testScore' => $this->getSubmittedTestScorePercent(),
+                'eligibilityPassed' => false,
+                'eligibilityThreshold' => $this->getEligibilityThresholdPercent(),
+                'applicationScore' => null,
+                'pendingManual' => false,
+                'showAutoEligibility' => true,
+            ])
+            <p class="mt-4 text-red-900/80 dark:text-red-200/80">{{ __('candidate.take_test_eligibility_failed_help') }}</p>
+        </div>
+
+    @elseif ($this->pageStatus === 'awaiting_final_validation')
+        <div class="rounded-xl border border-green-200 bg-green-50 p-10 text-center dark:border-green-900 dark:bg-green-950/40">
+            <div class="mb-4 text-4xl">✅</div>
+            <h2 class="mb-2 text-xl font-bold text-green-950 dark:text-green-100">{{ __('candidate.take_test_eligibility_passed_title') }}</h2>
+            @include('filament.candidate.pages.partials.take-test-result-summary', [
+                'testScore' => $this->getSubmittedTestScorePercent(),
+                'eligibilityPassed' => true,
+                'eligibilityThreshold' => $this->getEligibilityThresholdPercent(),
+                'applicationScore' => $this->getApplicationScorePercent(),
+                'pendingManual' => false,
+                'showAutoEligibility' => true,
+            ])
+            <p class="mt-4 text-green-900/80 dark:text-green-200/80">{{ __('candidate.take_test_awaiting_final_validation_body') }}</p>
+        </div>
+
     @elseif ($this->pageStatus === 'waiting_level_validation')
         <div class="rounded-xl border border-blue-200 bg-blue-50 p-10 text-center dark:border-blue-900 dark:bg-blue-950/40">
             <div class="mb-4 text-4xl">🎯</div>
             <h2 class="mb-2 text-xl font-bold text-blue-950 dark:text-blue-100">
                 {{ __('candidate.take_test_level_submitted_title', ['level' => $this->currentLevel]) }}
             </h2>
+            @include('filament.candidate.pages.partials.take-test-result-summary', [
+                'testScore' => $this->getSubmittedTestScorePercent(),
+                'eligibilityPassed' => $this->isFullyAutoScoredLevel() ? $this->didPassEligibility() : null,
+                'eligibilityThreshold' => $this->getEligibilityThresholdPercent(),
+                'applicationScore' => $this->getApplicationScorePercent(),
+                'pendingManual' => $this->hasPendingManualReview(),
+                'showAutoEligibility' => $this->isFullyAutoScoredLevel() && $this->didPassEligibility() !== null,
+            ])
             <p class="text-blue-900/80 dark:text-blue-200/80">{{ __('candidate.take_test_level_submitted_body') }}</p>
         </div>
 

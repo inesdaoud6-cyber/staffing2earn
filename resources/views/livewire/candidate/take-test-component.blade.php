@@ -34,11 +34,51 @@
             <p style="color:#78350f;">{{ __('L administrateur doit valider votre candidature avant que vous puissiez passer le test.') }}</p>
         </div>
 
+    @elseif($pageStatus === 'level_eligibility_failed')
+        <div style="text-align:center;padding:3rem;background:#fef2f2;border:1px solid #fecaca;border-radius:14px;">
+            <div style="font-size:3rem;margin-bottom:1rem;">❌</div>
+            <h2 style="font-size:1.25rem;font-weight:800;color:#991b1b;margin-bottom:0.5rem;">{{ __('candidate.take_test_eligibility_failed_title') }}</h2>
+            @if ($testScore = $this->getSubmittedTestScorePercent())
+                <p style="font-size:1.75rem;font-weight:800;color:#7f1d1d;">{{ __('candidate.take_test_score', ['score' => number_format($testScore, 2)]) }}</p>
+            @endif
+            <p style="color:#b91c1c;font-weight:600;">{{ __('candidate.take_test_eligibility_failed_inline', ['threshold' => number_format((float) $this->getEligibilityThresholdPercent(), 2)]) }}</p>
+            <p style="margin-top:1rem;color:#991b1b;">{{ __('candidate.take_test_eligibility_failed_help') }}</p>
+        </div>
+
+    @elseif($pageStatus === 'awaiting_final_validation')
+        <div style="text-align:center;padding:3rem;background:#f0fdf4;border:1px solid #86efac;border-radius:14px;">
+            <div style="font-size:3rem;margin-bottom:1rem;">✅</div>
+            <h2 style="font-size:1.25rem;font-weight:800;color:#065f46;margin-bottom:0.5rem;">{{ __('candidate.take_test_eligibility_passed_title') }}</h2>
+            @if ($testScore = $this->getSubmittedTestScorePercent())
+                <p style="font-size:1.75rem;font-weight:800;color:#047857;">{{ __('candidate.take_test_score', ['score' => number_format($testScore, 2)]) }}</p>
+            @endif
+            <p style="color:#047857;font-weight:600;">{{ __('candidate.take_test_eligibility_passed', ['threshold' => number_format((float) $this->getEligibilityThresholdPercent(), 2)]) }}</p>
+            @if ($appScore = $this->getApplicationScorePercent())
+                <p style="margin-top:1rem;font-weight:600;color:#065f46;">{{ __('candidate.take_test_application_score', ['score' => number_format($appScore, 2)]) }}</p>
+            @endif
+            <p style="margin-top:1rem;color:#047857;">{{ __('candidate.take_test_awaiting_final_validation_body') }}</p>
+        </div>
+
     @elseif($pageStatus === 'waiting_level_validation')
         <div style="text-align:center;padding:3rem;background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;">
             <div style="font-size:3rem;margin-bottom:1rem;">🎯</div>
-            <h2 style="font-size:1.25rem;font-weight:800;color:#1e40af;margin-bottom:0.5rem;">Niveau {{ $currentLevel }} soumis</h2>
-            <p style="color:#1d4ed8;">{{ __('Vos réponses ont été enregistrées. En attente de validation de l administrateur.') }}</p>
+            <h2 style="font-size:1.25rem;font-weight:800;color:#1e40af;margin-bottom:0.5rem;">
+                {{ __('candidate.take_test_level_submitted_title', ['level' => $currentLevel]) }}
+            </h2>
+            @if ($testScore = $this->getSubmittedTestScorePercent())
+                <p style="font-size:1.75rem;font-weight:800;color:#1e3a8a;margin-bottom:0.5rem;">
+                    {{ __('candidate.take_test_provisional_score', ['score' => number_format($testScore, 2)]) }}
+                </p>
+            @endif
+            <p style="color:#1d4ed8;">{{ __('candidate.take_test_level_submitted_body') }}</p>
+            @if ($this->hasPendingManualReview())
+                <p style="margin-top:0.75rem;font-size:0.9rem;color:#1e40af;">{{ __('candidate.take_test_pending_manual_review') }}</p>
+            @endif
+            @if ($appScore = $this->getApplicationScorePercent())
+                <p style="margin-top:1rem;font-size:0.9rem;font-weight:600;color:#1e3a8a;">
+                    {{ __('candidate.take_test_application_score', ['score' => number_format($appScore, 2)]) }}
+                </p>
+            @endif
         </div>
 
     @elseif($pageStatus === 'all_validated')

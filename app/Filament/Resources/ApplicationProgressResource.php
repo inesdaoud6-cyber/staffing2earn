@@ -146,7 +146,8 @@ class ApplicationProgressResource extends Resource
                     ->numeric()
                     ->default(1),
                 TextInput::make('main_score')
-                    ->label(__('admin.primary_score'))
+                    ->label(__('admin.application_score'))
+                    ->helperText(__('admin.application_score_hint'))
                     ->numeric()
                     ->default(0),
                 TextInput::make('secondary_score')
@@ -575,7 +576,7 @@ class ApplicationProgressResource extends Resource
         ];
     }
 
-    public static function advanceToNextLevel(ApplicationProgress $record): void
+    public static function advanceToNextLevel(ApplicationProgress $record, bool $notifyCandidate = true, bool $notifyAdmin = true): void
     {
         $record->refresh();
         $oldLevel = $record->current_level;
@@ -587,29 +588,35 @@ class ApplicationProgressResource extends Resource
             'score_published' => false,
             'test_session_expires_at' => null,
         ];
-        $nextTestId = $record->offre?->testIdForLevel($newLevel);
+        $nextTestId = $record->offre?->testIdForLevel($newLevel + 1);
         if ($nextTestId !== null) {
             $payload['test_id'] = $nextTestId;
         }
         $record->update($payload);
         $record->loadMissing('candidate.user', 'offre');
-        CandidateNotification::create([
-            'user_id' => $record->candidate->user_id,
-            'type' => 'info',
-            'title' => __('admin.candidate_notif_level_validated_title'),
-            'message' => __('admin.candidate_notif_level_validated_body', [
-                'old' => (string) $oldLevel,
-                'new' => (string) $newLevel,
-            ]),
-            'offre_id' => $record->offre_id,
-        ]);
-        Notification::make()
-            ->title(__('admin.application_toast_level_advanced', [
-                'old' => (string) $oldLevel,
-                'new' => (string) $newLevel,
-            ]))
-            ->success()
-            ->send();
+
+        if ($notifyCandidate) {
+            CandidateNotification::create([
+                'user_id' => $record->candidate->user_id,
+                'type' => 'info',
+                'title' => __('admin.candidate_notif_level_validated_title'),
+                'message' => __('admin.candidate_notif_level_validated_body', [
+                    'old' => (string) $oldLevel,
+                    'new' => (string) $newLevel,
+                ]),
+                'offre_id' => $record->offre_id,
+            ]);
+        }
+
+        if ($notifyAdmin) {
+            Notification::make()
+                ->title(__('admin.application_toast_level_advanced', [
+                    'old' => (string) $oldLevel,
+                    'new' => (string) $newLevel,
+                ]))
+                ->success()
+                ->send();
+        }
     }
 
     public static function recalculateScoresForResponse(ApplicationProgress $application, int $responseLevel): void
@@ -623,28 +630,7 @@ class ApplicationProgressResource extends Resource
             return;
         }
 
-        $main = 0.0;
-        $secondary = 0.0;
-
-        foreach ($response->questionResponses()->with('question')->get() as $qr) {
-            $question = $qr->question;
-            if (! $question || ! $question->scorable) {
-                continue;
-            }
-
-            $score = (float) ($qr->obtained_score ?? $qr->auto_score ?? 0);
-
-            if ($question->classification === 'primary') {
-                $main += $score;
-            } else {
-                $secondary += $score;
-            }
-        }
-
-        $application->update([
-            'main_score' => round($main, 2),
-            'secondary_score' => round($secondary, 2),
-        ]);
+        app(\App\Services\TestScoringService::class)->evaluateResponse($response, $application->fresh());
     }
 
     public static function publishScoreForRecord(ApplicationProgress $record, ?int $responseLevel = null): void
