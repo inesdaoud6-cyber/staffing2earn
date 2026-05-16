@@ -343,11 +343,13 @@ class TakeTestComponent extends Component
 
         $result = app(CandidateTestSubmissionService::class)->processAfterSubmit($application, $response);
 
-        app(NotificationService::class)->sendLevelSubmitted(
-            auth()->user(),
-            $this->currentLevel,
-            $application->offre_id
-        );
+        if (($result['outcome'] ?? null) !== CandidateTestSubmissionService::OUTCOME_ELIGIBILITY_FAILED) {
+            app(NotificationService::class)->sendLevelSubmitted(
+                auth()->user(),
+                $this->currentLevel,
+                $application->offre_id
+            );
+        }
 
         $this->applySubmitOutcome($result);
 

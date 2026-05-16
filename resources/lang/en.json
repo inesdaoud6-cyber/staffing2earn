@@ -340,7 +340,7 @@
     "candidate.take_test_eligibility_failed_title": "Eligibility threshold not reached",
     "candidate.take_test_eligibility_failed_inline": "Below the eligibility threshold (< :threshold%).",
     "candidate.take_test_eligibility_failed_body": "Your score is :score% (required: :threshold%).",
-    "candidate.take_test_eligibility_failed_help": "You cannot continue to the next test. An administrator may review your application.",
+    "candidate.take_test_eligibility_failed_help": "You cannot continue to the next test. Your application has been closed.",
     "candidate.take_test_advanced_to_next": "You can now take test level :level.",
     "candidate.take_test_level_header": "Level :level",
     "candidate.take_test_no_questions_title": "No questions for this test",

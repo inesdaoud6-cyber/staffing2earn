@@ -358,7 +358,7 @@
     "candidate.take_test_eligibility_failed_title": "لم يتم بلوغ عتبة الأهلية",
     "candidate.take_test_eligibility_failed_inline": "أقل من عتبة الأهلية (< :threshold٪).",
     "candidate.take_test_eligibility_failed_body": "نتيجتك :score٪ (المطلوب: :threshold٪).",
-    "candidate.take_test_eligibility_failed_help": "لا يمكنك الانتقال إلى الاختبار التالي. قد يراجع المسؤول طلبك.",
+    "candidate.take_test_eligibility_failed_help": "لا يمكنك الانتقال إلى الاختبار التالي. تم إغلاق طلبك.",
     "candidate.take_test_advanced_to_next": "يمكنك الآن إجراء الاختبار المستوى :level.",
     "candidate.take_test_level_header": "المستوى :level",
     "candidate.take_test_no_questions_title": "لا توجد أسئلة لهذا الاختبار",

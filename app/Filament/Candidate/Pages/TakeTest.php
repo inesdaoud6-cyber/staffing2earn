@@ -516,14 +516,16 @@ class TakeTest extends Page
 
         $result = app(CandidateTestSubmissionService::class)->processAfterSubmit($application, $response);
 
-        CandidateNotification::create([
-            'user_id' => auth()->id(),
-            'type' => 'info',
-            'title' => __('candidate.level_submitted_notification_title', ['level' => $this->currentLevel]),
-            'message' => __('candidate.level_submitted_notification_body', ['level' => $this->currentLevel]),
-            'offre_id' => $application->offre_id,
-            'application_progress_id' => $application->id,
-        ]);
+        if (($result['outcome'] ?? null) !== CandidateTestSubmissionService::OUTCOME_ELIGIBILITY_FAILED) {
+            CandidateNotification::create([
+                'user_id' => auth()->id(),
+                'type' => 'info',
+                'title' => __('candidate.level_submitted_notification_title', ['level' => $this->currentLevel]),
+                'message' => __('candidate.level_submitted_notification_body', ['level' => $this->currentLevel]),
+                'offre_id' => $application->offre_id,
+                'application_progress_id' => $application->id,
+            ]);
+        }
 
         $this->applySubmitOutcome($result);
 

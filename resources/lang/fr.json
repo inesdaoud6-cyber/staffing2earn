@@ -335,7 +335,7 @@
     "candidate.take_test_eligibility_failed_title": "Seuil d'admissibilité non atteint",
     "candidate.take_test_eligibility_failed_inline": "En dessous du seuil d'admissibilité (< :threshold %).",
     "candidate.take_test_eligibility_failed_body": "Votre score est de :score % (requis : :threshold %).",
-    "candidate.take_test_eligibility_failed_help": "Vous ne pouvez pas passer au test suivant. Un administrateur pourra examiner votre candidature.",
+    "candidate.take_test_eligibility_failed_help": "Vous ne pouvez pas passer au test suivant. Votre candidature est clôturée.",
     "candidate.take_test_advanced_to_next": "Vous pouvez maintenant passer le test niveau :level.",
     "candidate.take_test_level_header": "Niveau :level",
     "candidate.take_test_no_questions_title": "Aucune question pour ce test",

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Filament\Resources\ApplicationProgressResource;
 use App\Models\ApplicationProgress;
+use App\Models\CandidateNotification;
 use App\Models\Response;
 use App\Models\Test;
 
@@ -121,7 +122,7 @@ class CandidateTestSubmissionService
             return null;
         }
 
-        if ($application->level_status === 'rejected') {
+        if ($application->status === 'rejected' || $application->level_status === 'rejected') {
             return 'level_eligibility_failed';
         }
 
@@ -139,5 +140,26 @@ class CandidateTestSubmissionService
         }
 
         return 'waiting_level_validation';
+    }
+
+    private function notifyApplicationRejected(ApplicationProgress $application): void
+    {
+        $application->loadMissing('candidate.user', 'offre');
+        $userId = $application->candidate?->user_id;
+
+        if (! $userId) {
+            return;
+        }
+
+        CandidateNotification::create([
+            'user_id' => $userId,
+            'type' => 'rejected',
+            'title' => __('admin.candidate_notif_rejected_title'),
+            'message' => $application->offre
+                ? __('admin.candidate_notif_rejected_body_with_offer', ['offer' => $application->offre->title])
+                : __('admin.candidate_notif_rejected_body_open'),
+            'offre_id' => $application->offre_id,
+            'application_progress_id' => $application->id,
+        ]);
     }
 }
