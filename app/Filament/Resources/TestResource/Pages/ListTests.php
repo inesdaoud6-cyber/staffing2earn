@@ -5,5 +5,10 @@ use Filament\Actions;
 use App\Filament\Resources\Pages\ListRecords;
 class ListTests extends ListRecords {
     protected static string $resource = TestResource::class;
-    protected function getHeaderActions(): array { return [Actions\CreateAction::make()]; }
+    protected function getHeaderActions(): array
+    {
+        return $this->prependTableLayoutToggleActions([
+            Actions\CreateAction::make(),
+        ]);
+    }
 }
