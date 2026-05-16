@@ -208,9 +208,10 @@ class CandidateResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListCandidates::route('/'),
-            'create' => Pages\CreateCandidate::route('/create'),
-            'edit'   => Pages\EditCandidate::route('/{record}/edit'),
+            'index' => Pages\BrowseJobOffers::route('/'),
+            'by_offer' => Pages\ListOfferCandidates::route('/offre/{offre}'),
+            'view' => Pages\ViewOfferCandidate::route('/offre/{offre}/candidate/{record}'),
+            'edit' => Pages\EditCandidate::route('/{record}/edit'),
         ];
     }
 }

@@ -1,6 +1,7 @@
 <x-filament-panels::page>
     @php
         $stats = $this->getFreeApplicationStats();
+        $freeUrl = \App\Filament\Resources\ApplicationProgressResource::getUrl('free');
     @endphp
 
     <div class="app-mgmt-free-banner">
@@ -10,10 +11,7 @@
                     <h2 class="app-mgmt-free-banner__title">{{ __('admin.application_section_free') }}</h2>
                     <p class="app-mgmt-free-banner__desc">{{ __('admin.application_section_free_desc') }}</p>
                 </div>
-                <a
-                    href="{{ \App\Filament\Resources\ApplicationProgressResource::getUrl('free') }}"
-                    class="app-mgmt-free-banner__cta"
-                >
+                <a href="{{ $freeUrl }}" class="app-mgmt-free-banner__cta">
                     {{ __('admin.application_manage_free') }} →
                 </a>
             </div>
@@ -41,7 +39,9 @@
     <x-filament::section
         :heading="__('admin.application_section_job_offers')"
         :description="__('admin.application_section_job_offers_desc')"
+        class="mt-6"
     >
         {{ $this->table }}
     </x-filament::section>
 </x-filament-panels::page>
+
